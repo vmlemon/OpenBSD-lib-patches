@@ -1,4 +1,4 @@
-/* ssl/d1_lib.c */
+/* $OpenBSD: d1_lib.c,v 1.23 2014/07/11 13:09:04 miod Exp $ */
 /* 
  * DTLS implementation written by Nagendra Modadugu
  * (nagendra@cs.stanford.edu) for the OpenSSL project 2005.  
@@ -64,24 +64,28 @@
 
 #include <stdio.h>
 #include <openssl/objects.h>
+
+#include "pqueue.h"
 #include "ssl_locl.h"
 
-const char dtls1_version_str[]="DTLSv1" OPENSSL_VERSION_PTEXT;
 int dtls1_listen(SSL *s, struct sockaddr *client);
 
 SSL3_ENC_METHOD DTLSv1_enc_data = {
-	dtls1_enc,
-	tls1_mac,
-	tls1_setup_key_block,
-	tls1_generate_master_secret,
-	tls1_change_cipher_state,
-	tls1_final_finish_mac,
-	TLS1_FINISH_MAC_LENGTH,
-	tls1_cert_verify_mac,
-	TLS_MD_CLIENT_FINISH_CONST, TLS_MD_CLIENT_FINISH_CONST_SIZE,
-	TLS_MD_SERVER_FINISH_CONST, TLS_MD_SERVER_FINISH_CONST_SIZE,
-	tls1_alert_code,
-	tls1_export_keying_material,
+	.enc = dtls1_enc,
+	.mac = tls1_mac,
+	.setup_key_block = tls1_setup_key_block,
+	.generate_master_secret = tls1_generate_master_secret,
+	.change_cipher_state = tls1_change_cipher_state,
+	.final_finish_mac = tls1_final_finish_mac,
+	.finish_mac_length = TLS1_FINISH_MAC_LENGTH,
+	.cert_verify_mac = tls1_cert_verify_mac,
+	.client_finished_label = TLS_MD_CLIENT_FINISH_CONST,
+	.client_finished_label_len = TLS_MD_CLIENT_FINISH_CONST_SIZE,
+	.server_finished_label = TLS_MD_SERVER_FINISH_CONST,
+	.server_finished_label_len = TLS_MD_SERVER_FINISH_CONST_SIZE,
+	.alert_value = tls1_alert_code,
+	.export_keying_material = tls1_export_keying_material,
+	.enc_flags = SSL_ENC_FLAG_DTLS|SSL_ENC_FLAG_EXPLICIT_IV,
 };
 
 long
@@ -99,8 +103,10 @@ dtls1_new(SSL *s)
 
 	if (!ssl3_new(s))
 		return (0);
-	if ((d1 = calloc(1, sizeof *d1)) == NULL)
+	if ((d1 = calloc(1, sizeof *d1)) == NULL) {
+		ssl3_free(s);
 		return (0);
+	}
 
 	/* d1->handshake_epoch=0; */
 
@@ -128,6 +134,7 @@ dtls1_new(SSL *s)
 		if (d1->buffered_app_data.q)
 			pqueue_free(d1->buffered_app_data.q);
 		free(d1);
+		ssl3_free(s);
 		return (0);
 	}
 
@@ -145,18 +152,14 @@ dtls1_clear_queues(SSL *s)
 
 	while ((item = pqueue_pop(s->d1->unprocessed_rcds.q)) != NULL) {
 		rdata = (DTLS1_RECORD_DATA *) item->data;
-		if (rdata->rbuf.buf) {
-			free(rdata->rbuf.buf);
-		}
+		free(rdata->rbuf.buf);
 		free(item->data);
 		pitem_free(item);
 	}
 
 	while ((item = pqueue_pop(s->d1->processed_rcds.q)) != NULL) {
 		rdata = (DTLS1_RECORD_DATA *) item->data;
-		if (rdata->rbuf.buf) {
-			free(rdata->rbuf.buf);
-		}
+		free(rdata->rbuf.buf);
 		free(item->data);
 		pitem_free(item);
 	}
@@ -176,9 +179,9 @@ dtls1_clear_queues(SSL *s)
 	}
 
 	while ((item = pqueue_pop(s->d1->buffered_app_data.q)) != NULL) {
-		frag = (hm_fragment *)item->data;
-		free(frag->fragment);
-		free(frag);
+		rdata = (DTLS1_RECORD_DATA *) item->data;
+		free(rdata->rbuf.buf);
+		free(item->data);
 		pitem_free(item);
 	}
 }
@@ -196,6 +199,7 @@ dtls1_free(SSL *s)
 	pqueue_free(s->d1->sent_messages);
 	pqueue_free(s->d1->buffered_app_data.q);
 
+	OPENSSL_cleanse(s->d1, sizeof *s->d1);
 	free(s->d1);
 	s->d1 = NULL;
 }
@@ -310,11 +314,13 @@ dtls1_start_timer(SSL *s)
 
 	/* Add duration to current time */
 	s->d1->next_timeout.tv_sec += s->d1->timeout_duration;
-	BIO_ctrl(SSL_get_rbio(s), BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT, 0, &(s->d1->next_timeout));
+	BIO_ctrl(SSL_get_rbio(s), BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT, 0,
+	    &(s->d1->next_timeout));
 }
 
 struct timeval*
-dtls1_get_timeout(SSL *s, struct timeval* timeleft) {
+dtls1_get_timeout(SSL *s, struct timeval* timeleft)
+{
 	struct timeval timenow;
 
 	/* If no timeout is set, just return NULL */
@@ -327,8 +333,8 @@ dtls1_get_timeout(SSL *s, struct timeval* timeleft) {
 
 	/* If timer already expired, set remaining time to 0 */
 	if (s->d1->next_timeout.tv_sec < timenow.tv_sec ||
-		(s->d1->next_timeout.tv_sec == timenow.tv_sec &&
-	s->d1->next_timeout.tv_usec <= timenow.tv_usec)) {
+	    (s->d1->next_timeout.tv_sec == timenow.tv_sec &&
+	     s->d1->next_timeout.tv_usec <= timenow.tv_usec)) {
 		memset(timeleft, 0, sizeof(struct timeval));
 		return timeleft;
 	}
@@ -389,7 +395,8 @@ dtls1_stop_timer(SSL *s)
 	memset(&(s->d1->timeout), 0, sizeof(struct dtls1_timeout_st));
 	memset(&(s->d1->next_timeout), 0, sizeof(struct timeval));
 	s->d1->timeout_duration = 1;
-	BIO_ctrl(SSL_get_rbio(s), BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT, 0, &(s->d1->next_timeout));
+	BIO_ctrl(SSL_get_rbio(s), BIO_CTRL_DGRAM_SET_NEXT_TIMEOUT, 0,
+	    &(s->d1->next_timeout));
 	/* Clear retransmission buffer */
 	dtls1_clear_record_buffer(s);
 }
@@ -401,7 +408,8 @@ dtls1_check_timeout_num(SSL *s)
 
 	/* Reduce MTU after 2 unsuccessful retransmissions */
 	if (s->d1->timeout.num_alerts > 2) {
-		s->d1->mtu = BIO_ctrl(SSL_get_wbio(s), BIO_CTRL_DGRAM_GET_FALLBACK_MTU, 0, NULL);
+		s->d1->mtu = BIO_ctrl(SSL_get_wbio(s),
+		    BIO_CTRL_DGRAM_GET_FALLBACK_MTU, 0, NULL);
 
 	}
 
@@ -450,4 +458,17 @@ dtls1_listen(SSL *s, struct sockaddr *client)
 
 	(void)BIO_dgram_get_peer(SSL_get_rbio(s), client);
 	return 1;
+}
+
+void
+dtls1_build_sequence_number(unsigned char *dst, unsigned char *seq,
+    unsigned short epoch)
+{
+	unsigned char dtlsseq[SSL3_SEQUENCE_SIZE];
+	unsigned char *p;
+
+	p = dtlsseq;
+	s2n(epoch, p);
+	memcpy(p, &seq[2], SSL3_SEQUENCE_SIZE - 2);
+	memcpy(dst, dtlsseq, SSL3_SEQUENCE_SIZE);
 }

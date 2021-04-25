@@ -1,4 +1,4 @@
-/* apps/version.c */
+/* $OpenBSD: version.c,v 1.18 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -112,26 +112,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
-#include <openssl/evp.h>
-#include <openssl/crypto.h>
+
 #include <openssl/bn.h>
-#ifndef OPENSSL_NO_MD2
-#include <openssl/md2.h>
-#endif
-#ifndef OPENSSL_NO_RC4
-#include <openssl/rc4.h>
-#endif
-#ifndef OPENSSL_NO_DES
-#include <openssl/des.h>
-#endif
-#ifndef OPENSSL_NO_IDEA
-#include <openssl/idea.h>
-#endif
+#include <openssl/crypto.h>
+#include <openssl/evp.h>
+
 #ifndef OPENSSL_NO_BF
 #include <openssl/blowfish.h>
 #endif
 
+#ifndef OPENSSL_NO_DES
+#include <openssl/des.h>
+#endif
+
+#ifndef OPENSSL_NO_IDEA
+#include <openssl/idea.h>
+#endif
+
+#ifndef OPENSSL_NO_RC4
+#include <openssl/rc4.h>
+#endif
 
 int version_main(int, char **);
 
@@ -141,12 +143,6 @@ version_main(int argc, char **argv)
 	int i, ret = 0;
 	int cflags = 0, version = 0, date = 0, options = 0, platform = 0,
 	    dir = 0;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
 
 	if (argc == 1)
 		version = 1;
@@ -188,9 +184,6 @@ version_main(int argc, char **argv)
 	if (options) {
 		printf("options:  ");
 		printf("%s ", BN_options());
-#ifndef OPENSSL_NO_MD2
-		printf("%s ", MD2_options());
-#endif
 #ifndef OPENSSL_NO_RC4
 		printf("%s ", RC4_options());
 #endif
@@ -210,6 +203,6 @@ version_main(int argc, char **argv)
 	if (dir)
 		printf("%s\n", SSLeay_version(SSLEAY_DIR));
 end:
-	
+
 	return (ret);
 }

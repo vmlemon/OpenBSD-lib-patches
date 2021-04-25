@@ -1,4 +1,4 @@
-/* crypto/des/set_key.c */
+/* $OpenBSD: set_key.c,v 1.17 2014/06/12 15:49:28 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -66,7 +66,7 @@
 #include <openssl/crypto.h>
 #include "des_locl.h"
 
-OPENSSL_IMPLEMENT_GLOBAL(int,DES_check_key,0)	/* defaults to false */
+int DES_check_key = 0;	/* defaults to false */
 
 static const unsigned char odd_parity[256]={
   1,  1,  2,  2,  4,  4,  7,  7,  8,  8, 11, 11, 13, 13, 14, 14,

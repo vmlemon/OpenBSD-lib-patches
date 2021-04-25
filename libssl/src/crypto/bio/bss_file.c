@@ -1,4 +1,4 @@
-/* crypto/bio/bss_file.c */
+/* $OpenBSD: bss_file.c,v 1.30 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -83,13 +83,12 @@
 #endif
 #endif
 
-#include <stdio.h>
 #include <errno.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
-
-#if !defined(OPENSSL_NO_STDIO)
 
 static int file_write(BIO *h, const char *buf, int num);
 static int file_read(BIO *h, char *buf, int size);
@@ -324,6 +323,5 @@ file_puts(BIO *bp, const char *str)
 	return (ret);
 }
 
-#endif /* OPENSSL_NO_STDIO */
 
 #endif /* HEADER_BSS_FILE_C */

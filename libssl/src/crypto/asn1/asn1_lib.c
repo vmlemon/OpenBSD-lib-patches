@@ -1,4 +1,4 @@
-/* crypto/asn1/asn1_lib.c */
+/* $OpenBSD: asn1_lib.c,v 1.32 2014/07/11 14:49:12 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,15 +56,16 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <limits.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/asn1.h>
 #include <openssl/asn1_mac.h>
+#include <openssl/err.h>
 
 static int asn1_get_length(const unsigned char **pp, int *inf, long *rl, int max);
 static void asn1_put_length(unsigned char **pp, int length);
-const char ASN1_version[]="ASN.1" OPENSSL_VERSION_PTEXT;
 
 static int
 _asn1_check_infinite_end(const unsigned char **p, long len)
@@ -136,6 +137,9 @@ ASN1_get_object(const unsigned char **pp, long *plength, int *ptag,
 	if (!asn1_get_length(&p, &inf, plength, (int)max))
 		goto err;
 
+	if (inf && !(ret & V_ASN1_CONSTRUCTED))
+		goto err;
+
 #if 0
 	fprintf(stderr, "p=%d + *plength=%ld > omax=%ld + *pp=%d  (%d > %d)\n",
 	    (int)p, *plength, omax, (int)*pp, (int)(p+ *plength),
@@ -173,15 +177,18 @@ asn1_get_length(const unsigned char **pp, int *inf, long *rl, int max)
 		*inf = 0;
 		i= *p & 0x7f;
 		if (*(p++) & 0x80) {
+			if (max < (int)i)
+				return (0);
+			/* skip leading zeroes */
+			while (i && *p == 0) {
+				p++;
+				i--;
+			}
 			if (i > sizeof(long))
 				return 0;
-			if (max-- == 0)
-				return (0);
 			while (i-- > 0) {
 				ret <<= 8L;
 				ret |= *(p++);
-				if (max-- == 0)
-					return (0);
 			}
 		} else
 			ret = i;
@@ -401,8 +408,7 @@ ASN1_STRING_set(ASN1_STRING *str, const void *_data, int len)
 void
 ASN1_STRING_set0(ASN1_STRING *str, void *data, int len)
 {
-	if (str->data)
-		free(str->data);
+	free(str->data);
 	str->data = data;
 	str->length = len;
 }

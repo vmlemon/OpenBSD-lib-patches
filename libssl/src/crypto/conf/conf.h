@@ -1,4 +1,4 @@
-/* crypto/conf/conf.h */
+/* $OpenBSD: conf.h,v 1.13 2014/06/12 15:49:28 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,11 +59,12 @@
 #ifndef  HEADER_CONF_H
 #define HEADER_CONF_H
 
+#include <openssl/opensslconf.h>
+
 #include <openssl/bio.h>
 #include <openssl/lhash.h>
 #include <openssl/stack.h>
 #include <openssl/safestack.h>
-#include <openssl/e_os2.h>
 
 #include <openssl/ossl_typ.h>
 
@@ -120,10 +121,8 @@ int CONF_set_default_method(CONF_METHOD *meth);
 void CONF_set_nconf(CONF *conf, LHASH_OF(CONF_VALUE) *hash);
 LHASH_OF(CONF_VALUE) *CONF_load(LHASH_OF(CONF_VALUE) *conf, const char *file,
     long *eline);
-#ifndef OPENSSL_NO_FP_API
 LHASH_OF(CONF_VALUE) *CONF_load_fp(LHASH_OF(CONF_VALUE) *conf, FILE *fp,
     long *eline);
-#endif
 LHASH_OF(CONF_VALUE) *CONF_load_bio(LHASH_OF(CONF_VALUE) *conf, BIO *bp, long *eline);
 STACK_OF(CONF_VALUE) *CONF_get_section(LHASH_OF(CONF_VALUE) *conf,
     const char *section);
@@ -157,9 +156,7 @@ void NCONF_free(CONF *conf);
 void NCONF_free_data(CONF *conf);
 
 int NCONF_load(CONF *conf, const char *file, long *eline);
-#ifndef OPENSSL_NO_FP_API
 int NCONF_load_fp(CONF *conf, FILE *fp, long *eline);
-#endif
 int NCONF_load_bio(CONF *conf, BIO *bp, long *eline);
 STACK_OF(CONF_VALUE) *NCONF_get_section(const CONF *conf, const char *section);
 char *NCONF_get_string(const CONF *conf, const char *group, const char *name);

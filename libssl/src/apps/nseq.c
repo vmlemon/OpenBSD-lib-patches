@@ -1,4 +1,4 @@
-/* nseq.c */
+/* $OpenBSD: nseq.c,v 1.16 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -58,14 +58,15 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "apps.h"
-#include <openssl/pem.h>
-#include <openssl/err.h>
 
+#include "apps.h"
+
+#include <openssl/err.h>
+#include <openssl/pem.h>
 
 int nseq_main(int, char **);
 
-int 
+int
 nseq_main(int argc, char **argv)
 {
 	char **args, *infile = NULL, *outfile = NULL;
@@ -75,9 +76,9 @@ nseq_main(int argc, char **argv)
 	NETSCAPE_CERT_SEQUENCE *seq = NULL;
 	int i, ret = 1;
 	int badarg = 0;
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
+
 	ERR_load_crypto_strings();
+
 	args = argv + 1;
 	while (!badarg && *args && *args[0] == '-') {
 		if (!strcmp(*args, "-toseq"))

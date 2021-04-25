@@ -1,4 +1,4 @@
-/* crypto/des/des.h */
+/* $OpenBSD: des.h,v 1.18 2014/06/12 15:49:28 deraadt Exp $ */
 /* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,8 +59,7 @@
 #ifndef HEADER_NEW_DES_H
 #define HEADER_NEW_DES_H
 
-#include <openssl/e_os2.h>	/* OPENSSL_EXTERN, OPENSSL_NO_DES,
-				   DES_LONG (via openssl/opensslconf.h */
+#include <openssl/opensslconf.h>
 
 #ifdef OPENSSL_NO_DES
 #error DES is disabled.
@@ -108,10 +107,8 @@ typedef struct DES_ks
 #define DES_ede2_ofb64_encrypt(i,o,l,k1,k2,iv,n) \
 	DES_ede3_ofb64_encrypt((i),(o),(l),(k1),(k2),(k1),(iv),(n))
 
-OPENSSL_DECLARE_GLOBAL(int,DES_check_key);	/* defaults to false */
-#define DES_check_key OPENSSL_GLOBAL_REF(DES_check_key)
-OPENSSL_DECLARE_GLOBAL(int,DES_rw_mode);	/* defaults to DES_PCBC_MODE */
-#define DES_rw_mode OPENSSL_GLOBAL_REF(DES_rw_mode)
+extern int DES_check_key;	/* defaults to false */
+extern int DES_rw_mode;		/* defaults to DES_PCBC_MODE */
 
 const char *DES_options(void);
 void DES_ecb3_encrypt(const_DES_cblock *input, DES_cblock *output,

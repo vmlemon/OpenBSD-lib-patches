@@ -1,3 +1,4 @@
+/* $OpenBSD: ofb128.c,v 1.3 2014/06/12 15:49:30 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 2008 The OpenSSL Project.  All rights reserved.
  *
@@ -82,7 +83,7 @@ void CRYPTO_ofb128_encrypt(const unsigned char *in, unsigned char *out,
 			--len;
 			n = (n+1) % 16;
 		}
-#if defined(STRICT_ALIGNMENT)
+#ifdef __STRICT_ALIGNMENT
 		if (((size_t)in|(size_t)out|(size_t)ivec)%sizeof(size_t) != 0)
 			break;
 #endif

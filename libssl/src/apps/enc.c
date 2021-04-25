@@ -1,4 +1,4 @@
-/* apps/enc.c */
+/* $OpenBSD: enc.c,v 1.38 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,29 +56,29 @@
  * [including the GNU Public Licence.]
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
+#include <openssl/comp.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
-#include <openssl/x509.h>
-#include <openssl/rand.h>
 #include <openssl/pem.h>
-#include <openssl/comp.h>
-#include <ctype.h>
+#include <openssl/rand.h>
+#include <openssl/x509.h>
 
 int set_hex(char *in, unsigned char *out, int size);
-#undef SIZE
-#undef BSIZE
 
 #define SIZE	(512)
 #define BSIZE	(8*1024)
 #define	PROG	enc_main
 
-static void 
+static void
 show_ciphers(const OBJ_NAME * name, void *bio_)
 {
 	BIO *bio = bio_;
@@ -97,7 +97,7 @@ show_ciphers(const OBJ_NAME * name, void *bio_)
 
 int enc_main(int, char **);
 
-int 
+int
 enc_main(int argc, char **argv)
 {
 	static const char magic[] = "Salted__";
@@ -129,16 +129,6 @@ enc_main(int argc, char **argv)
 	char *engine = NULL;
 #endif
 	const EVP_MD *dgst = NULL;
-	int non_fips_allow = 0;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	/* first check the program name */
 	program_name(argv[0], pname, sizeof pname);
@@ -237,6 +227,7 @@ enc_main(int argc, char **argv)
 			if (!fgets(buf, sizeof buf, infile)) {
 				BIO_printf(bio_err, "unable to read key from '%s'\n",
 				    file);
+				fclose(infile);
 				goto bad;
 			}
 			fclose(infile);
@@ -268,9 +259,7 @@ enc_main(int argc, char **argv)
 			if (--argc < 1)
 				goto bad;
 			md = *(++argv);
-		} else if (strcmp(*argv, "-non-fips-allow") == 0)
-			non_fips_allow = 1;
-		else if ((argv[0][0] == '-') &&
+		} else if ((argv[0][0] == '-') &&
 		    ((c = EVP_get_cipherbyname(&(argv[0][1]))) != NULL)) {
 			cipher = c;
 		} else if (strcmp(*argv, "-none") == 0)
@@ -347,7 +336,7 @@ enc_main(int argc, char **argv)
 			BIO_printf(bio_err, "bufsize=%d\n", bsize);
 	}
 	strbuf = malloc(SIZE);
-	buff = (unsigned char *) malloc(EVP_ENCODE_LENGTH(bsize));
+	buff = malloc(EVP_ENCODE_LENGTH(bsize));
 	if ((buff == NULL) || (strbuf == NULL)) {
 		BIO_printf(bio_err, "malloc failure %ld\n", (long) EVP_ENCODE_LENGTH(bsize));
 		goto end;
@@ -365,10 +354,8 @@ enc_main(int argc, char **argv)
 		BIO_set_callback_arg(out, (char *) bio_err);
 	}
 	if (inf == NULL) {
-#ifndef OPENSSL_NO_SETVBUF_IONBF
 		if (bufsize != NULL)
 			setvbuf(stdin, (char *) NULL, _IONBF, 0);
-#endif				/* ndef OPENSSL_NO_SETVBUF_IONBF */
 		BIO_set_fp(in, stdin, BIO_NOCLOSE);
 	} else {
 		if (BIO_read_filename(in, inf) <= 0) {
@@ -414,10 +401,8 @@ enc_main(int argc, char **argv)
 	}
 	if (outf == NULL) {
 		BIO_set_fp(out, stdout, BIO_NOCLOSE);
-#ifndef OPENSSL_NO_SETVBUF_IONBF
 		if (bufsize != NULL)
 			setvbuf(stdout, (char *) NULL, _IONBF, 0);
-#endif				/* ndef OPENSSL_NO_SETVBUF_IONBF */
 	} else {
 		if (BIO_write_filename(out, outf) <= 0) {
 			perror(outf);
@@ -545,10 +530,6 @@ enc_main(int argc, char **argv)
 
 		BIO_get_cipher_ctx(benc, &ctx);
 
-		if (non_fips_allow)
-			EVP_CIPHER_CTX_set_flags(ctx,
-			    EVP_CIPH_FLAG_NON_FIPS_ALLOW);
-
 		if (!EVP_CipherInit_ex(ctx, cipher, NULL, NULL, NULL, enc)) {
 			BIO_printf(bio_err, "Error setting cipher %s\n",
 			    EVP_CIPHER_name(cipher));
@@ -617,10 +598,8 @@ enc_main(int argc, char **argv)
 	}
 end:
 	ERR_print_errors(bio_err);
-	if (strbuf != NULL)
-		free(strbuf);
-	if (buff != NULL)
-		free(buff);
+	free(strbuf);
+	free(buff);
 	if (in != NULL)
 		BIO_free(in);
 	if (out != NULL)
@@ -633,13 +612,12 @@ end:
 	if (bzl != NULL)
 		BIO_free(bzl);
 #endif
-	if (pass)
-		free(pass);
-	
+	free(pass);
+
 	return (ret);
 }
 
-int 
+int
 set_hex(char *in, unsigned char *out, int size)
 {
 	int i, n;

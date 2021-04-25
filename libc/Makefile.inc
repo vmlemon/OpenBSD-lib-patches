@@ -1,4 +1,4 @@
-#	$OpenBSD: Makefile.inc,v 1.18 2013/03/28 16:43:08 eric Exp $
+#	$OpenBSD: Makefile.inc,v 1.21 2014/07/10 12:55:14 tedu Exp $
 #
 # This file contains make rules used to build libc
 #
@@ -8,7 +8,7 @@ all:
 	@echo "need to define LIBCSRCDIR" >&2; exit 1
 .endif
 
-CFLAGS+=	-I${LIBCSRCDIR}/include
+CFLAGS+=	-I${LIBCSRCDIR}/include -Werror-implicit-function-declaration
 
 # Include link-time warnings about unsafe API uses (ie. strcpy)
 CFLAGS+=-DAPIWARN
@@ -41,7 +41,6 @@ AINC+=  -nostdinc -idirafter ${DESTDIR}/usr/include
 .include "${LIBCSRCDIR}/asr/Makefile.inc"
 .include "${LIBCSRCDIR}/net/Makefile.inc"
 .include "${LIBCSRCDIR}/nls/Makefile.inc"
-.include "${LIBCSRCDIR}/ohash/Makefile.inc"
 .if (${MACHINE_CPU} != "alpha")
 .include "${LIBCSRCDIR}/quad/Makefile.inc"
 .endif
@@ -59,15 +58,3 @@ AINC+=  -nostdinc -idirafter ${DESTDIR}/usr/include
 .endif
 
 CFLAGS+=-DNLS
-
-LIBKERN=	${LIBCSRCDIR}/../../sys/lib/libkern
-
-KSRCS=	bcmp.c bzero.c ffs.c strcat.c strcmp.c strcpy.c strlen.c  strncmp.c \
-	strncpy.c strnlen.c htonl.c htons.c ntohl.c ntohs.c timingsafe_bcmp.c
-.if (${MACHINE_CPU} != "alpha")
-KSRCS+=	adddi3.c anddi3.c ashldi3.c ashrdi3.c cmpdi2.c divdi3.c iordi3.c \
-	lshldi3.c lshrdi3.c moddi3.c muldi3.c negdi2.c notdi2.c qdivrem.c \
-	subdi3.c  ucmpdi2.c udivdi3.c umoddi3.c xordi3.c
-KINCLUDES+=	quad/quad.h
-.endif
-

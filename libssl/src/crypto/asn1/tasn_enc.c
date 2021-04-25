@@ -1,4 +1,4 @@
-/* tasn_enc.c */
+/* $OpenBSD: tasn_enc.c,v 1.14 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2000.
  */
@@ -58,7 +58,7 @@
 
 #include <stddef.h>
 #include <string.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
@@ -435,7 +435,7 @@ asn1_set_seq_out(STACK_OF(ASN1_VALUE) *sk, unsigned char **out, int skcontlen,
 		if (sk_ASN1_VALUE_num(sk) < 2)
 			do_sort = 0;
 		else {
-			derlst = malloc(sk_ASN1_VALUE_num(sk) *
+			derlst = reallocarray(NULL, sk_ASN1_VALUE_num(sk),
 			    sizeof(*derlst));
 			tmpdat = malloc(skcontlen);
 			if (!derlst || !tmpdat) {

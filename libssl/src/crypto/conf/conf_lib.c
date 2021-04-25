@@ -1,4 +1,4 @@
-/* conf_lib.c */
+/* $OpenBSD: conf_lib.c,v 1.12 2014/07/09 11:10:50 bcook Exp $ */
 /* Written by Richard Levitte (richard@levitte.org) for the OpenSSL
  * project 2000.
  */
@@ -63,8 +63,6 @@
 #include <openssl/conf_api.h>
 #include <openssl/lhash.h>
 
-const char CONF_version[]="CONF" OPENSSL_VERSION_PTEXT;
-
 static CONF_METHOD *default_CONF_method = NULL;
 
 /* Init a 'CONF' structure from an old LHASH */
@@ -106,7 +104,6 @@ LHASH_OF(CONF_VALUE) *CONF_load(LHASH_OF(CONF_VALUE) *conf, const char *file,
 	return ltmp;
 }
 
-#ifndef OPENSSL_NO_FP_API
 LHASH_OF(CONF_VALUE) *CONF_load_fp(LHASH_OF(CONF_VALUE) *conf, FILE *fp,
     long *eline)
 {
@@ -121,7 +118,6 @@ LHASH_OF(CONF_VALUE) *CONF_load_fp(LHASH_OF(CONF_VALUE) *conf, FILE *fp,
 	BIO_free(btmp);
 	return ltmp;
 }
-#endif
 
 LHASH_OF(CONF_VALUE) *CONF_load_bio(LHASH_OF(CONF_VALUE) *conf, BIO *bp,
     long *eline)
@@ -193,7 +189,6 @@ CONF_free(LHASH_OF(CONF_VALUE) *conf)
 	NCONF_free_data(&ctmp);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 CONF_dump_fp(LHASH_OF(CONF_VALUE) *conf, FILE *out)
 {
@@ -208,7 +203,6 @@ CONF_dump_fp(LHASH_OF(CONF_VALUE) *conf, FILE *out)
 	BIO_free(btmp);
 	return ret;
 }
-#endif
 
 int
 CONF_dump_bio(LHASH_OF(CONF_VALUE) *conf, BIO *out)
@@ -269,7 +263,6 @@ NCONF_load(CONF *conf, const char *file, long *eline)
 	return conf->meth->load(conf, file, eline);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 NCONF_load_fp(CONF *conf, FILE *fp, long *eline)
 {
@@ -284,7 +277,6 @@ NCONF_load_fp(CONF *conf, FILE *fp, long *eline)
 	BIO_free(btmp);
 	return ret;
 }
-#endif
 
 int
 NCONF_load_bio(CONF *conf, BIO *bp, long *eline)
@@ -357,7 +349,6 @@ NCONF_get_number_e(const CONF *conf, const char *group, const char *name,
 	return 1;
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 NCONF_dump_fp(const CONF *conf, FILE *out)
 {
@@ -371,7 +362,6 @@ NCONF_dump_fp(const CONF *conf, FILE *out)
 	BIO_free(btmp);
 	return ret;
 }
-#endif
 
 int
 NCONF_dump_bio(const CONF *conf, BIO *out)

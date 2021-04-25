@@ -1,4 +1,4 @@
-/* crypto/x509/x509cset.c */
+/* $OpenBSD: x509cset.c,v 1.8 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2001.
  */
@@ -57,10 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
-#include <openssl/objects.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
 #include <openssl/x509.h>
 
 int

@@ -1,4 +1,4 @@
-/* crypto/asn1/x_name.c */
+/* $OpenBSD: x_name.c,v 1.20 2014/07/12 11:25:25 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,11 +56,14 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/asn1t.h>
+#include <openssl/err.h>
 #include <openssl/x509.h>
+
 #include "asn1_locl.h"
 
 typedef STACK_OF(X509_NAME_ENTRY) STACK_OF_X509_NAME_ENTRY;
@@ -164,8 +167,7 @@ x509_name_ex_free(ASN1_VALUE **pval, const ASN1_ITEM *it)
 
 	BUF_MEM_free(a->bytes);
 	sk_X509_NAME_ENTRY_pop_free(a->entries, X509_NAME_ENTRY_free);
-	if (a->canon_enc)
-		free(a->canon_enc);
+	free(a->canon_enc);
 	free(a);
 	*pval = NULL;
 }
@@ -333,7 +335,7 @@ x509_name_ex_print(BIO *out, ASN1_VALUE **pval, int indent, const char *fname,
  * In future we could also normalize the UTF8 too.
  *
  * By doing this comparison of Name structures can be rapidly
- * perfomed by just using memcmp() of the canonical encoding.
+ * performed by just using memcmp() of the canonical encoding.
  * By omitting the leading SEQUENCE name constraints of type
  * dirName can also be checked with a simple memcmp().
  */

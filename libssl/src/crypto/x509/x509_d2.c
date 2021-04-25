@@ -1,4 +1,4 @@
-/* crypto/x509/x509_d2.c */
+/* $OpenBSD: x509_d2.c,v 1.9 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/crypto.h>
+#include <openssl/err.h>
 #include <openssl/x509.h>
 
-#ifndef OPENSSL_NO_STDIO
 int
 X509_STORE_set_default_paths(X509_STORE *ctx)
 {
@@ -106,4 +106,3 @@ X509_STORE_load_locations(X509_STORE *ctx, const char *file, const char *path)
 		return (0);
 	return (1);
 }
-#endif

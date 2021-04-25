@@ -1,4 +1,4 @@
-/* crypto/pem/pem_pkey.c */
+/* $OpenBSD: pem_pk8.c,v 1.8 2014/07/12 16:03:37 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,14 +57,15 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/buffer.h>
-#include <openssl/objects.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs12.h>
 #include <openssl/rand.h>
 #include <openssl/x509.h>
-#include <openssl/pkcs12.h>
-#include <openssl/pem.h>
 
 static int do_pk8pkey(BIO *bp, EVP_PKEY *x, int isder, int nid,
     const EVP_CIPHER *enc, char *kstr, int klen, pem_password_cb *cb, void *u);
@@ -183,14 +184,12 @@ d2i_PKCS8PrivateKey_bio(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u)
 	if (!ret)
 		return NULL;
 	if (x) {
-		if (*x)
-			EVP_PKEY_free(*x);
+		EVP_PKEY_free(*x);
 		*x = ret;
 	}
 	return ret;
 }
 
-#ifndef OPENSSL_NO_FP_API
 
 int
 i2d_PKCS8PrivateKey_fp(FILE *fp, EVP_PKEY *x, const EVP_CIPHER *enc,
@@ -251,7 +250,6 @@ d2i_PKCS8PrivateKey_fp(FILE *fp, EVP_PKEY **x, pem_password_cb *cb, void *u)
 	return ret;
 }
 
-#endif
 
 IMPLEMENT_PEM_rw(PKCS8, X509_SIG, PEM_STRING_PKCS8, X509_SIG)
 IMPLEMENT_PEM_rw(PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO, PEM_STRING_PKCS8INF,

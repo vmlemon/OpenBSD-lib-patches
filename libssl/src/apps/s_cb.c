@@ -1,4 +1,4 @@
-/* apps/s_cb.c - callback functions used by s_client, s_server, and s_time */
+/* $OpenBSD: s_cb.c,v 1.22 2014/06/13 04:29:13 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -109,17 +109,22 @@
  *
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <netdb.h>
 #include <sys/socket.h>
+
 #include <netinet/in.h>
 
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "apps.h"
+
 #include <openssl/err.h>
 #include <openssl/rand.h>
-#include <openssl/x509.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
+
 #include "s_apps.h"
 
 #define	COOKIE_SECRET_LENGTH	16
@@ -691,11 +696,6 @@ tlsext_cb(SSL * s, int client_server, int type, unsigned char *data, int len,
 		extname = "renegotiation info";
 		break;
 
-#ifdef TLSEXT_TYPE_opaque_prf_input
-	case TLSEXT_TYPE_opaque_prf_input:
-		extname = "opaque PRF input";
-		break;
-#endif
 #ifdef TLSEXT_TYPE_next_proto_neg
 	case TLSEXT_TYPE_next_proto_neg:
 		extname = "next protocol";

@@ -1,3 +1,4 @@
+/* $OpenBSD: modes_lcl.h,v 1.8 2014/07/10 22:45:57 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 2010 The OpenSSL Project.  All rights reserved.
  *
@@ -5,9 +6,11 @@
  * ====================================================================
  */
 
-#include <openssl/modes.h>
 #include <machine/endian.h>
 
+#include <openssl/opensslconf.h>
+
+#include <openssl/modes.h>
 
 #if defined(_LP64)
 typedef long i64;
@@ -21,14 +24,6 @@ typedef unsigned long long u64;
 
 typedef unsigned int u32;
 typedef unsigned char u8;
-
-#define STRICT_ALIGNMENT 1
-#if defined(__i386)	|| defined(__i386__)	|| \
-    defined(__x86_64)	|| defined(__x86_64__)	|| \
-    defined(_M_IX86)	|| defined(_M_AMD64)	|| defined(_M_X64) || \
-    defined(__s390__)	|| defined(__s390x__)
-# undef STRICT_ALIGNMENT
-#endif
 
 #if !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_NO_INLINE_ASM)
 #if defined(__GNUC__) && __GNUC__>=2
@@ -47,7 +42,7 @@ typedef unsigned char u8;
 #  define BSWAP4(x) ({	u32 ret=(x);			\
 			asm ("bswapl %0"		\
 			: "+r"(ret));	ret;		})
-# elif (defined(__arm__) || defined(__arm)) && !defined(STRICT_ALIGNMENT)
+# elif (defined(__arm__) || defined(__arm)) && !defined(__STRICT_ALIGNMENT)
 #  define BSWAP8(x) ({	u32 lo=(u64)(x)>>32,hi=(x);	\
 			asm ("rev %0,%0; rev %1,%1"	\
 			: "+r"(hi),"+r"(lo));		\
@@ -60,7 +55,7 @@ typedef unsigned char u8;
 #endif
 #endif
 
-#if defined(BSWAP4) && !defined(STRICT_ALIGNMENT)
+#if defined(BSWAP4) && !defined(__STRICT_ALIGNMENT)
 #define GETU32(p)	BSWAP4(*(const u32 *)(p))
 #define PUTU32(p,v)	*(u32 *)(p) = BSWAP4(v)
 #else

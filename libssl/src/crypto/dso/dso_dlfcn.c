@@ -1,4 +1,4 @@
-/* dso_dlfcn.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: dso_dlfcn.c,v 1.27 2014/07/11 08:44:48 jsing Exp $ */
 /* Written by Geoff Thorpe (geoff@geoffthorpe.net) for the OpenSSL
  * project 2000.
  */
@@ -57,8 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/dso.h>
+#include <openssl/err.h>
 
 #ifndef DSO_DLFCN
 DSO_METHOD *
@@ -146,8 +148,7 @@ dlfcn_load(DSO *dso)
 
 err:
 	/* Cleanup! */
-	if (filename != NULL)
-		free(filename);
+	free(filename);
 	if (ptr != NULL)
 		dlclose(ptr);
 	return (0);

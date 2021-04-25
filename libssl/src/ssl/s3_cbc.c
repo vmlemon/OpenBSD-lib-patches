@@ -1,4 +1,4 @@
-/* ssl/s3_cbc.c */
+/* $OpenBSD: s3_cbc.c,v 1.8 2014/07/10 08:51:14 tedu Exp $ */
 /* ====================================================================
  * Copyright (c) 2012 The OpenSSL Project.  All rights reserved.
  *
@@ -148,8 +148,9 @@ tls1_cbc_remove_padding(const SSL* s, SSL3_RECORD *rec, unsigned block_size,
 {
 	unsigned padding_length, good, to_check, i;
 	const unsigned overhead = 1 /* padding length byte */ + mac_size;
+
 	/* Check if version requires explicit IV */
-	if (s->version >= TLS1_1_VERSION || s->version == DTLS1_BAD_VER) {
+	if (SSL_USE_EXPLICIT_IV(s)) {
 		/* These lengths are all public so we can test them in
 		 * non-constant time.
 		 */
@@ -168,11 +169,12 @@ tls1_cbc_remove_padding(const SSL* s, SSL3_RECORD *rec, unsigned block_size,
 	 * even length so the padding bug check cannot be performed. This bug
 	 * workaround has been around since SSLeay so hopefully it is either
 	 * fixed now or no buggy implementation supports compression [steve]
+	 * (We don't support compression either, so it's not in operation.)
 	 */
-	if ((s->options & SSL_OP_TLS_BLOCK_PADDING_BUG) && !s->expand) {
+	if ((s->options & SSL_OP_TLS_BLOCK_PADDING_BUG)) {
 		/* First packet is even in size, so check */
-		if ((memcmp(s->s3->read_sequence, "\0\0\0\0\0\0\0\0", 8) == 0) &&
-		    !(padding_length & 1)) {
+		if ((memcmp(s->s3->read_sequence, "\0\0\0\0\0\0\0\0",
+		    SSL3_SEQUENCE_SIZE) == 0) && !(padding_length & 1)) {
 			s->s3->flags|=TLS1_FLAGS_TLS_PADDING_BUG;
 		}
 		if ((s->s3->flags & TLS1_FLAGS_TLS_PADDING_BUG) &&

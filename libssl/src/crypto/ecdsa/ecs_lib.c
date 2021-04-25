@@ -1,4 +1,4 @@
-/* crypto/ecdsa/ecs_lib.c */
+/* $OpenBSD: ecs_lib.c,v 1.7 2014/07/10 22:45:57 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2005 The OpenSSL Project.  All rights reserved.
  *
@@ -54,14 +54,15 @@
  */
 
 #include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include "ecs_locl.h"
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
 #include <openssl/err.h>
 #include <openssl/bn.h>
-
-const char ECDSA_version[]="ECDSA" OPENSSL_VERSION_PTEXT;
 
 static const ECDSA_METHOD *default_ECDSA_method = NULL;
 
@@ -108,7 +109,7 @@ static ECDSA_DATA *ECDSA_DATA_new_method(ENGINE *engine)
 {
 	ECDSA_DATA *ret;
 
-	ret=(ECDSA_DATA *)malloc(sizeof(ECDSA_DATA));
+	ret = malloc(sizeof(ECDSA_DATA));
 	if (ret == NULL)
 	{
 		ECDSAerr(ECDSA_F_ECDSA_DATA_NEW_METHOD, ERR_R_MALLOC_FAILURE);

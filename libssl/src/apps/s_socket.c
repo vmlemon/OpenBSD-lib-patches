@@ -1,4 +1,4 @@
-/* apps/s_socket.c -  socket-related functions used by s_client and s_server */
+/* $OpenBSD: s_socket.c,v 1.42 2014/06/28 04:39:41 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,24 +56,22 @@
  * [including the GNU Public Licence.]
  */
 
+#include <sys/socket.h>
+
+#include <netinet/in.h>
+
+#include <errno.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <signal.h>
-#include <netdb.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#include <openssl/e_os2.h>
 
 #include "apps.h"
-#include "s_apps.h"
+
 #include <openssl/ssl.h>
 
-#ifndef OPENSSL_NO_SOCK
-
+#include "s_apps.h"
 
 static int ssl_sock_init(void);
 static int init_server(int *sock, int port, int type);
@@ -81,7 +79,6 @@ static int init_server_long(int *sock, int port, char *ip, int type);
 static int do_accept(int acc_sock, int *sock, char **host);
 
 #define SOCKET_PROTOCOL	IPPROTO_TCP
-
 
 static int
 ssl_sock_init(void)
@@ -124,6 +121,7 @@ init_client(int *sock, char *host, char *port, int type, int af)
 			    (char *) &i, sizeof(i));
 			if (i < 0) {
 				perror("keepalive");
+				close(s);
 				return (0);
 			}
 		}
@@ -168,8 +166,7 @@ do_server(int port, int type, int *ret,
 		} else
 			sock = accept_socket;
 		i = (*cb) (name, sock, context);
-		if (name != NULL)
-			free(name);
+		free(name);
 		if (type == SOCK_STREAM) {
 			shutdown(sock, SHUT_RDWR);
 			close(sock);
@@ -284,16 +281,19 @@ redoit:
 	} else {
 		if ((*host = strdup(h1->h_name)) == NULL) {
 			perror("strdup");
+			close(ret);
 			return (0);
 		}
 
 		h2 = gethostbyname(*host);
 		if (h2 == NULL) {
 			BIO_printf(bio_err, "gethostbyname failure\n");
+			close(ret);
 			return (0);
 		}
 		if (h2->h_addrtype != AF_INET) {
 			BIO_printf(bio_err, "gethostbyname addr is not AF_INET\n");
+			close(ret);
 			return (0);
 		}
 	}
@@ -333,12 +333,13 @@ int
 extract_port(char *str, short *port_ptr)
 {
 	int i;
+	const char *errstr;
 	struct servent *s;
 
-	i = atoi(str);
-	if (i != 0)
+	i = strtonum(str, 1, 65535, &errstr);
+	if (!errstr) {
 		*port_ptr = (unsigned short) i;
-	else {
+	} else {
 		s = getservbyname(str, "tcp");
 		if (s == NULL) {
 			BIO_printf(bio_err, "getservbyname failure for %s\n", str);
@@ -348,4 +349,3 @@ extract_port(char *str, short *port_ptr)
 	}
 	return (1);
 }
-#endif

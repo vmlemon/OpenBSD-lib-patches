@@ -1,4 +1,4 @@
-/* crypto/asn1/x_info.c */
+/* $OpenBSD: x_info.c,v 1.14 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/evp.h>
+
 #include <openssl/asn1.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/x509.h>
 
 X509_INFO *
@@ -102,8 +103,7 @@ X509_INFO_free(X509_INFO *x)
 		X509_CRL_free(x->crl);
 	if (x->x_pkey != NULL)
 		X509_PKEY_free(x->x_pkey);
-	if (x->enc_data != NULL)
-		free(x->enc_data);
+	free(x->enc_data);
 	free(x);
 }
 

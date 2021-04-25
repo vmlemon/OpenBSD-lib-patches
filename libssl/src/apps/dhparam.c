@@ -1,4 +1,4 @@
-/* apps/dhparam.c */
+/* $OpenBSD: dhparam.c,v 1.33 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -109,24 +109,25 @@
  *
  */
 
-#include <openssl/opensslconf.h>/* for OPENSSL_NO_DH */
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_DH */
+
 #ifndef OPENSSL_NO_DH
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
-#include <openssl/err.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/dh.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
+#include <openssl/x509.h>
 
-#ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
-#endif
-
 
 #define DEFBITS	512
 
@@ -150,26 +151,14 @@ dhparam_main(int argc, char **argv)
 {
 	DH *dh = NULL;
 	int i, badops = 0, text = 0;
-#ifndef OPENSSL_NO_DSA
 	int dsaparam = 0;
-#endif
 	BIO *in = NULL, *out = NULL;
 	int informat, outformat, check = 0, noout = 0, C = 0, ret = 1;
 	char *infile, *outfile, *prog;
-	char *inrand = NULL;
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
 	int num = 0, g = 0;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	infile = NULL;
 	outfile = NULL;
@@ -208,10 +197,8 @@ dhparam_main(int argc, char **argv)
 			check = 1;
 		else if (strcmp(*argv, "-text") == 0)
 			text = 1;
-#ifndef OPENSSL_NO_DSA
 		else if (strcmp(*argv, "-dsaparam") == 0)
 			dsaparam = 1;
-#endif
 		else if (strcmp(*argv, "-C") == 0)
 			C = 1;
 		else if (strcmp(*argv, "-noout") == 0)
@@ -220,11 +207,7 @@ dhparam_main(int argc, char **argv)
 			g = 2;
 		else if (strcmp(*argv, "-5") == 0)
 			g = 5;
-		else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
-		} else if (((sscanf(*argv, "%d", &num) == 0) || (num <= 0)))
+		else if (((sscanf(*argv, "%d", &num) == 0) || (num <= 0)))
 			goto bad;
 		argv++;
 		argc--;
@@ -238,9 +221,7 @@ bad:
 		BIO_printf(bio_err, " -outform arg  output format - one of DER PEM\n");
 		BIO_printf(bio_err, " -in arg       input file\n");
 		BIO_printf(bio_err, " -out arg      output file\n");
-#ifndef OPENSSL_NO_DSA
 		BIO_printf(bio_err, " -dsaparam     read or generate DSA parameters, convert to DH\n");
-#endif
 		BIO_printf(bio_err, " -check        check the DH parameters\n");
 		BIO_printf(bio_err, " -text         print a text form of the DH parameters\n");
 		BIO_printf(bio_err, " -C            Output C code\n");
@@ -250,9 +231,6 @@ bad:
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err, " -engine e     use engine e, possibly a hardware device.\n");
 #endif
-		BIO_printf(bio_err, " -rand file:file:...\n");
-		BIO_printf(bio_err, "               - load the file (or the files in the directory) into\n");
-		BIO_printf(bio_err, "               the random number generator\n");
 		BIO_printf(bio_err, " -noout        no output\n");
 		goto end;
 	}
@@ -265,14 +243,12 @@ bad:
 	if (g && !num)
 		num = DEFBITS;
 
-#ifndef OPENSSL_NO_DSA
 	if (dsaparam) {
 		if (g) {
 			BIO_printf(bio_err, "generator may not be chosen for DSA parameters\n");
 			goto end;
 		}
 	} else
-#endif
 	{
 		/* DH parameters */
 		if (num && !g)
@@ -283,7 +259,6 @@ bad:
 
 		BN_GENCB cb;
 		BN_GENCB_set(&cb, dh_cb, bio_err);
-#ifndef OPENSSL_NO_DSA
 		if (dsaparam) {
 			DSA *dsa = DSA_new();
 
@@ -302,7 +277,6 @@ bad:
 				goto end;
 			}
 		} else
-#endif
 		{
 			dh = DH_new();
 			BIO_printf(bio_err, "Generating DH parameters, %d bit long safe prime, generator %d\n", num, g);
@@ -332,7 +306,6 @@ bad:
 			BIO_printf(bio_err, "bad input format specified\n");
 			goto end;
 		}
-#ifndef OPENSSL_NO_DSA
 		if (dsaparam) {
 			DSA *dsa;
 
@@ -353,7 +326,6 @@ bad:
 				goto end;
 			}
 		} else
-#endif
 		{
 			if (informat == FORMAT_ASN1)
 				dh = d2i_DHparams_bio(in, NULL);
@@ -410,7 +382,7 @@ bad:
 
 		len = BN_num_bytes(dh->p);
 		bits = BN_num_bits(dh->p);
-		data = (unsigned char *) malloc(len);
+		data = malloc(len);
 		if (data == NULL) {
 			perror("malloc");
 			goto end;
@@ -475,7 +447,7 @@ end:
 		BIO_free_all(out);
 	if (dh != NULL)
 		DH_free(dh);
-	
+
 	return (ret);
 }
 

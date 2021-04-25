@@ -1,4 +1,4 @@
-/* crypto/srp/srp_lib.c */
+/* $OpenBSD: srp_lib.c,v 1.9 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Christophe Renou (christophe.renou@edelweb.fr) with 
  * the precious help of Peter Sylvester (peter.sylvester@edelweb.fr) 
  * for the EdelKey project and contributed to the OpenSSL project 2004.
@@ -56,11 +56,15 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
+#include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_SRP
-#include "cryptlib.h"
-#include "srp_lcl.h"
-#include <openssl/srp.h>
+
 #include <openssl/evp.h>
+#include <openssl/srp.h>
+
+#include "srp_lcl.h"
 
 #if (BN_BYTES == 8)
 # if defined(_LP64)
@@ -84,27 +88,35 @@ static BIGNUM *srp_Calc_k(BIGNUM *N, BIGNUM *g)
 	unsigned char digest[SHA_DIGEST_LENGTH];
 	unsigned char *tmp;
 	EVP_MD_CTX ctxt;
-	int longg ;
+	BIGNUM *ret = NULL;
+	int longg;
 	int longN = BN_num_bytes(N);
 
 	if ((tmp = malloc(longN)) == NULL)
 		return NULL;
-	BN_bn2bin(N,tmp) ;
+	BN_bn2bin(N,tmp);
 
 	EVP_MD_CTX_init(&ctxt);
-	EVP_DigestInit_ex(&ctxt, EVP_sha1(), NULL);
-	EVP_DigestUpdate(&ctxt, tmp, longN);
+	if (!EVP_DigestInit_ex(&ctxt, EVP_sha1(), NULL))
+		goto err;
+	if (!EVP_DigestUpdate(&ctxt, tmp, longN))
+		goto err;
 
 	memset(tmp, 0, longN);
-	longg = BN_bn2bin(g,tmp) ;
+	longg = BN_bn2bin(g,tmp);
         /* use the zeros behind to pad on left */
-	EVP_DigestUpdate(&ctxt, tmp + longg, longN-longg);
-	EVP_DigestUpdate(&ctxt, tmp, longg);
-	free(tmp);
+	if (!EVP_DigestUpdate(&ctxt, tmp + longg, longN-longg))
+		goto err;
+	if (!EVP_DigestUpdate(&ctxt, tmp, longg))
+		goto err;
 
-	EVP_DigestFinal_ex(&ctxt, digest, NULL);
+	if (!EVP_DigestFinal_ex(&ctxt, digest, NULL))
+		goto err;
+	ret = BN_bin2bn(digest, sizeof(digest), NULL);	
+err:
 	EVP_MD_CTX_cleanup(&ctxt);
-	return BN_bin2bn(digest, sizeof(digest), NULL);	
+	free(tmp);
+	return ret;
 	}
 
 BIGNUM *SRP_Calc_u(BIGNUM *A, BIGNUM *B, BIGNUM *N)
@@ -121,7 +133,7 @@ BIGNUM *SRP_Calc_u(BIGNUM *A, BIGNUM *B, BIGNUM *N)
 
 	longN= BN_num_bytes(N);
 
-	if ((cAB = malloc(2*longN)) == NULL) 
+	if ((cAB = reallocarray(NULL, 2, longN)) == NULL) 
 		return NULL;
 
 	memset(cAB, 0, longN);
@@ -257,6 +269,7 @@ BIGNUM *SRP_Calc_A(BIGNUM *a, BIGNUM *N, BIGNUM *g)
 BIGNUM *SRP_Calc_client_key(BIGNUM *N, BIGNUM *B, BIGNUM *g, BIGNUM *x, BIGNUM *a, BIGNUM *u)
 	{
 	BIGNUM *tmp = NULL, *tmp2 = NULL, *tmp3 = NULL , *k = NULL, *K = NULL;
+	BIGNUM *ret = NULL;
 	BN_CTX *bn_ctx;
 
 	if (u == NULL || B == NULL || N == NULL || g == NULL || x == NULL || a == NULL ||
@@ -285,13 +298,17 @@ BIGNUM *SRP_Calc_client_key(BIGNUM *N, BIGNUM *B, BIGNUM *g, BIGNUM *x, BIGNUM *
 	if (!BN_mod_exp(K,tmp,tmp2,N,bn_ctx))
 		goto err;
 
+	ret = K;
+	K = NULL;
+
 err :
 	BN_CTX_free(bn_ctx);
 	BN_clear_free(tmp);
 	BN_clear_free(tmp2);
 	BN_clear_free(tmp3);
 	BN_free(k);
-	return K;	
+	BN_clear_free(K);
+	return ret;	
 	}
 
 int SRP_Verify_B_mod_N(BIGNUM *B, BIGNUM *N)

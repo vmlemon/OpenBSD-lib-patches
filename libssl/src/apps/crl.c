@@ -1,4 +1,4 @@
-/* apps/crl.c */
+/* $OpenBSD: crl.c,v 1.25 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,15 +59,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
+#include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <openssl/pem.h>
 
-
-#undef POSTFIX
 #define	POSTFIX	".rvk"
 
 static const char *crl_usage[] = {
@@ -123,15 +123,6 @@ crl_main(int argc, char **argv)
 	EVP_PKEY *pkey;
 	int do_ver = 0;
 	const EVP_MD *md_alg, *digest = EVP_sha1();
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	if (bio_out == NULL)
 		if ((bio_out = BIO_new(BIO_s_file())) != NULL) {
@@ -380,7 +371,7 @@ end:
 		X509_STORE_CTX_cleanup(&ctx);
 		X509_STORE_free(store);
 	}
-	
+
 	return (ret);
 }
 

@@ -1,4 +1,4 @@
-/* asn_moid.c */
+/* $OpenBSD: asn_moid.c,v 1.12 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Stephen Henson (steve@openssl.org) for the OpenSSL
  * project 2001.
  */
@@ -56,12 +56,13 @@
  *
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include <openssl/crypto.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
+#include <openssl/err.h>
 #include <openssl/conf.h>
-#include <openssl/dso.h>
+#include <openssl/crypto.h>
 #include <openssl/x509.h>
 
 /* Simple ASN1 OID module: add all objects in a given section */

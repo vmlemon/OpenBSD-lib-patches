@@ -1,4 +1,4 @@
-/* bio_ndef.c */
+/* $OpenBSD: bio_ndef.c,v 1.8 2014/06/12 15:49:27 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project.
  */
@@ -146,8 +146,7 @@ BIO_new_NDEF(BIO *out, ASN1_VALUE *val, const ASN1_ITEM *it)
 err:
 	if (asn_bio)
 		BIO_free(asn_bio);
-	if (ndef_aux)
-		free(ndef_aux);
+	free(ndef_aux);
 	return NULL;
 }
 
@@ -187,8 +186,7 @@ ndef_prefix_free(BIO *b, unsigned char **pbuf, int *plen, void *parg)
 
 	ndef_aux = *(NDEF_SUPPORT **)parg;
 
-	if (ndef_aux->derbuf)
-		free(ndef_aux->derbuf);
+	free(ndef_aux->derbuf);
 
 	ndef_aux->derbuf = NULL;
 	*pbuf = NULL;

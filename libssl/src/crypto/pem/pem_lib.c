@@ -1,4 +1,4 @@
-/* crypto/pem/pem_lib.c */
+/* $OpenBSD: pem_lib.c,v 1.33 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,17 +56,20 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/buffer.h>
-#include <openssl/objects.h>
 #include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <openssl/x509.h>
+#include <openssl/objects.h>
 #include <openssl/pem.h>
 #include <openssl/pkcs12.h>
-#include "asn1_locl.h"
+#include <openssl/rand.h>
+#include <openssl/x509.h>
+
 #ifndef OPENSSL_NO_DES
 #include <openssl/des.h>
 #endif
@@ -74,7 +77,7 @@
 #include <openssl/engine.h>
 #endif
 
-const char PEM_version[] = "PEM" OPENSSL_VERSION_PTEXT;
+#include "asn1_locl.h"
 
 #define MIN_LENGTH	4
 
@@ -85,12 +88,6 @@ int pem_check_suffix(const char *pem_str, const char *suffix);
 int
 PEM_def_callback(char *buf, int num, int w, void *key)
 {
-#ifdef OPENSSL_NO_FP_API
-	/* We should not ever call the default callback routine from
-	 * windows. */
-	PEMerr(PEM_F_PEM_DEF_CALLBACK, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
-	return (-1);
-#else
 	int i, j;
 	const char *prompt;
 
@@ -110,7 +107,7 @@ PEM_def_callback(char *buf, int num, int w, void *key)
 		if (i != 0) {
 			PEMerr(PEM_F_PEM_DEF_CALLBACK,
 			    PEM_R_PROBLEMS_GETTING_PASSWORD);
-			memset(buf, 0, (unsigned int)num);
+			memset(buf, 0, num);
 			return (-1);
 		}
 		j = strlen(buf);
@@ -120,7 +117,6 @@ PEM_def_callback(char *buf, int num, int w, void *key)
 			break;
 	}
 	return (j);
-#endif
 }
 
 void
@@ -163,7 +159,6 @@ PEM_dek_info(char *buf, const char *type, int len, char *str)
 	buf[j + i * 2 + 1] = '\0';
 }
 
-#ifndef OPENSSL_NO_FP_API
 void *
 PEM_ASN1_read(d2i_of_void *d2i, const char *name, FILE *fp, void **x,
     pem_password_cb *cb, void *u)
@@ -180,7 +175,6 @@ PEM_ASN1_read(d2i_of_void *d2i, const char *name, FILE *fp, void **x,
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 static int
 check_pem(const char *nm, const char *name)
@@ -320,7 +314,6 @@ err:
 	return ret;
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 PEM_ASN1_write(i2d_of_void *i2d, const char *name, FILE *fp, void *x,
     const EVP_CIPHER *enc, unsigned char *kstr, int klen,
@@ -338,7 +331,6 @@ PEM_ASN1_write(i2d_of_void *i2d, const char *name, FILE *fp, void *x,
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 PEM_ASN1_write_bio(i2d_of_void *i2d, const char *name, BIO *bp, void *x,
@@ -369,7 +361,7 @@ PEM_ASN1_write_bio(i2d_of_void *i2d, const char *name, BIO *bp, void *x,
 	}
 	/* dzise + 8 bytes are needed */
 	/* actually it needs the cipher block size extra... */
-	data = (unsigned char *)malloc((unsigned int)dsize + 20);
+	data = malloc((unsigned int)dsize + 20);
 	if (data == NULL) {
 		PEMerr(PEM_F_PEM_ASN1_WRITE_BIO, ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -476,12 +468,11 @@ PEM_do_header(EVP_CIPHER_INFO *cipher, unsigned char *data, long *plen,
 	EVP_CIPHER_CTX_cleanup(&ctx);
 	OPENSSL_cleanse((char *)buf, sizeof(buf));
 	OPENSSL_cleanse((char *)key, sizeof(key));
-	j += i;
 	if (!o) {
 		PEMerr(PEM_F_PEM_DO_HEADER, PEM_R_BAD_DECRYPT);
 		return (0);
 	}
-	*plen = j;
+	*plen = j + i;
 	return (1);
 }
 
@@ -576,7 +567,6 @@ load_iv(char **fromp, unsigned char *to, int num)
 	return (1);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 PEM_write(FILE *fp, char *name, char *header, unsigned char *data, long len)
 {
@@ -592,7 +582,6 @@ PEM_write(FILE *fp, char *name, char *header, unsigned char *data, long len)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 PEM_write_bio(BIO *bp, const char *name, char *header, unsigned char *data,
@@ -618,7 +607,7 @@ PEM_write_bio(BIO *bp, const char *name, char *header, unsigned char *data,
 			goto err;
 	}
 
-	buf = malloc(PEM_BUFSIZE * 8);
+	buf = reallocarray(NULL, PEM_BUFSIZE, 8);
 	if (buf == NULL) {
 		reason = ERR_R_MALLOC_FAILURE;
 		goto err;
@@ -655,7 +644,6 @@ err:
 	return (0);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 PEM_read(FILE *fp, char **name, char **header, unsigned char **data, long *len)
 {
@@ -671,7 +659,6 @@ PEM_read(FILE *fp, char **name, char **header, unsigned char **data, long *len)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 PEM_read_bio(BIO *bp, char **name, char **header, unsigned char **data,

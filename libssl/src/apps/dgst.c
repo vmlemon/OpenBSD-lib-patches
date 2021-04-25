@@ -1,4 +1,4 @@
-/* apps/dgst.c */
+/* $OpenBSD: dgst.c,v 1.39 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,20 +57,20 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/objects.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
 #include <openssl/hmac.h>
+#include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
-#undef BUFSIZE
 #define BUFSIZE	1024*8
-
 
 int
 do_fp(BIO * out, unsigned char *buf, BIO * bp, int sep, int binout,
@@ -116,7 +116,7 @@ dgst_main(int argc, char **argv)
 	int debug = 0;
 	int keyform = FORMAT_PEM;
 	const char *outfile = NULL, *keyfile = NULL;
-	const char *sigfile = NULL, *randfile = NULL;
+	const char *sigfile = NULL;
 	int out_bin = -1, want_pub = 0, do_verify = 0;
 	EVP_PKEY *sigkey = NULL;
 	unsigned char *sigbuf = NULL;
@@ -127,21 +127,12 @@ dgst_main(int argc, char **argv)
 #endif
 	char *hmac_key = NULL;
 	char *mac_name = NULL;
-	int non_fips_allow = 0;
 	STACK_OF(OPENSSL_STRING) * sigopts = NULL, *macopts = NULL;
 
-	signal(SIGPIPE, SIG_IGN);
-
-	if ((buf = (unsigned char *) malloc(BUFSIZE)) == NULL) {
+	if ((buf = malloc(BUFSIZE)) == NULL) {
 		BIO_printf(bio_err, "out of memory\n");
 		goto end;
 	}
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	/* first check the program name */
 	program_name(argv[0], pname, sizeof pname);
@@ -157,11 +148,7 @@ dgst_main(int argc, char **argv)
 			separator = 1;
 		else if (strcmp(*argv, "-r") == 0)
 			separator = 2;
-		else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				break;
-			randfile = *(++argv);
-		} else if (strcmp(*argv, "-out") == 0) {
+		else if (strcmp(*argv, "-out") == 0) {
 			if (--argc < 1)
 				break;
 			outfile = *(++argv);
@@ -207,10 +194,6 @@ dgst_main(int argc, char **argv)
 			out_bin = 1;
 		else if (strcmp(*argv, "-d") == 0)
 			debug = 1;
-		else if (!strcmp(*argv, "-fips-fingerprint"))
-			hmac_key = "etaonrishdlcupfm";
-		else if (strcmp(*argv, "-non-fips-allow") == 0)
-			non_fips_allow = 1;
 		else if (!strcmp(*argv, "-hmac")) {
 			if (--argc < 1)
 				break;
@@ -357,11 +340,6 @@ mac_end:
 		if (r == 0)
 			goto end;
 	}
-	if (non_fips_allow) {
-		EVP_MD_CTX *md_ctx;
-		BIO_get_md_ctx(bmd, &md_ctx);
-		EVP_MD_CTX_set_flags(md_ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
-	}
 	if (hmac_key) {
 		sigkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, e,
 		    (unsigned char *) hmac_key, -1);
@@ -479,19 +457,17 @@ end:
 	}
 	if (in != NULL)
 		BIO_free(in);
-	if (passin)
-		free(passin);
+	free(passin);
 	BIO_free_all(out);
 	EVP_PKEY_free(sigkey);
 	if (sigopts)
 		sk_OPENSSL_STRING_free(sigopts);
 	if (macopts)
 		sk_OPENSSL_STRING_free(macopts);
-	if (sigbuf)
-		free(sigbuf);
+	free(sigbuf);
 	if (bmd != NULL)
 		BIO_free(bmd);
-	
+
 	return (err);
 }
 

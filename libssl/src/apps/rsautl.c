@@ -1,4 +1,4 @@
-/* rsautl.c */
+/* $OpenBSD: rsautl.c,v 1.24 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2000.
  */
@@ -57,10 +57,12 @@
  */
 
 #include <openssl/opensslconf.h>
-#ifndef OPENSSL_NO_RSA
+
+
+#include <string.h>
 
 #include "apps.h"
-#include <string.h>
+
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
@@ -76,11 +78,9 @@
 
 static void usage(void);
 
-
-
 int rsautl_main(int argc, char **);
 
-int 
+int
 rsautl_main(int argc, char **argv)
 {
 	ENGINE *e = NULL;
@@ -107,11 +107,6 @@ rsautl_main(int argc, char **argv)
 	argc--;
 	argv++;
 
-	if (!bio_err)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
 	pad = RSA_PKCS1_PADDING;
@@ -254,7 +249,7 @@ rsautl_main(int argc, char **argv)
 
 	keysize = RSA_size(rsa);
 
-	rsa_in = malloc(keysize * 2);
+	rsa_in = reallocarray(NULL, keysize, 2);
 	rsa_out = malloc(keysize);
 
 	/* Read the input data */
@@ -306,20 +301,19 @@ rsautl_main(int argc, char **argv)
 		BIO_dump(out, (char *) rsa_out, rsa_outlen);
 	else
 		BIO_write(out, rsa_out, rsa_outlen);
+
 end:
 	RSA_free(rsa);
 	BIO_free(in);
 	BIO_free_all(out);
-	if (rsa_in)
-		free(rsa_in);
-	if (rsa_out)
-		free(rsa_out);
-	if (passin)
-		free(passin);
+	free(rsa_in);
+	free(rsa_out);
+	free(passin);
+
 	return ret;
 }
 
-static void 
+static void
 usage()
 {
 	BIO_printf(bio_err, "Usage: rsautl [options]\n");
@@ -345,4 +339,3 @@ usage()
 
 }
 
-#endif

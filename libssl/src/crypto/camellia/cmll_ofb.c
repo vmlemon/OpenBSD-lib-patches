@@ -1,4 +1,4 @@
-/* crypto/camellia/camellia_ofb.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: cmll_ofb.c,v 1.3 2014/06/12 15:49:28 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 2006 The OpenSSL Project.  All rights reserved.
  *

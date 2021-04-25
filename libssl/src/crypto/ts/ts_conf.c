@@ -1,4 +1,4 @@
-/* crypto/ts/ts_conf.c */
+/* $OpenBSD: ts_conf.c,v 1.7 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2002.
  */
@@ -58,13 +58,15 @@
 
 #include <string.h>
 
+#include <openssl/opensslconf.h>
+
 #include <openssl/crypto.h>
-#include "cryptlib.h"
 #include <openssl/pem.h>
+#include <openssl/ts.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
-#include <openssl/ts.h>
 
 /* Macro definitions for the configuration file. */
 

@@ -1,4 +1,4 @@
-/* crypto/x509/x509_att.c */
+/* $OpenBSD: x509_att.c,v 1.11 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,12 @@
  */
 
 #include <stdio.h>
-#include <openssl/stack.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
-#include <openssl/objects.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/stack.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -304,7 +305,7 @@ int
 X509_ATTRIBUTE_set1_data(X509_ATTRIBUTE *attr, int attrtype, const void *data,
     int len)
 {
-	ASN1_TYPE *ttmp;
+	ASN1_TYPE *ttmp = NULL;
 	ASN1_STRING *stmp = NULL;
 	int atype = 0;
 
@@ -333,8 +334,11 @@ X509_ATTRIBUTE_set1_data(X509_ATTRIBUTE *attr, int attrtype, const void *data,
 	 * at least one value but some types use and zero length SET and
 	 * require this.
 	 */
-	if (attrtype == 0)
+	if (attrtype == 0) {
+		ASN1_STRING_free(stmp);
 		return 1;
+	}
+
 	if (!(ttmp = ASN1_TYPE_new()))
 		goto err;
 	if ((len == -1) && !(attrtype & MBSTRING_FLAG)) {
@@ -347,6 +351,8 @@ X509_ATTRIBUTE_set1_data(X509_ATTRIBUTE *attr, int attrtype, const void *data,
 	return 1;
 
 err:
+	ASN1_TYPE_free(ttmp);
+	ASN1_STRING_free(stmp);
 	X509err(X509_F_X509_ATTRIBUTE_SET1_DATA, ERR_R_MALLOC_FAILURE);
 	return 0;
 }

@@ -1,4 +1,4 @@
-/* apps/pkcs7.c */
+/* $OpenBSD: pkcs7.c,v 1.21 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -60,14 +60,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "apps.h"
-#include <openssl/err.h>
-#include <openssl/objects.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pkcs7.h>
-#include <openssl/pem.h>
 
+#include "apps.h"
+
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (DER or PEM)
  * -outform arg - output format - default PEM
@@ -78,7 +79,7 @@
 
 int pkcs7_main(int, char **);
 
-int 
+int
 pkcs7_main(int argc, char **argv)
 {
 	PKCS7 *p7 = NULL;
@@ -91,15 +92,6 @@ pkcs7_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	infile = NULL;
 	outfile = NULL;
@@ -287,6 +279,6 @@ end:
 		BIO_free(in);
 	if (out != NULL)
 		BIO_free_all(out);
-	
+
 	return (ret);
 }

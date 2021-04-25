@@ -1,4 +1,4 @@
-/* crypto/asn1/a_sign.c */
+/* $OpenBSD: a_sign.c,v 1.19 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -109,20 +109,18 @@
  *
  */
 
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <time.h>
 
-#include "cryptlib.h"
-
-#ifndef NO_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-
 #include <openssl/bn.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/objects.h>
 #include <openssl/buffer.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/x509.h>
+
 #include "asn1_locl.h"
 
 int
@@ -218,8 +216,7 @@ ASN1_item_sign_ctx(const ASN1_ITEM *it, X509_ALGOR *algor1, X509_ALGOR *algor2,
 		ASN1err(ASN1_F_ASN1_ITEM_SIGN_CTX, ERR_R_EVP_LIB);
 		goto err;
 	}
-	if (signature->data != NULL)
-		free(signature->data);
+	free(signature->data);
 	signature->data = buf_out;
 	buf_out = NULL;
 	signature->length = outl;

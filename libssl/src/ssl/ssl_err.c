@@ -1,4 +1,4 @@
-/* ssl/ssl_err.c */
+/* $OpenBSD: ssl_err.c,v 1.25 2014/06/13 11:52:03 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
  *
@@ -276,8 +276,11 @@ static ERR_STRING_DATA SSL_str_functs[]= {
 	{ERR_FUNC(SSL_F_SSL_USE_RSAPRIVATEKEY_FILE),	"SSL_use_RSAPrivateKey_file"},
 	{ERR_FUNC(SSL_F_SSL_VERIFY_CERT_CHAIN),	"SSL_VERIFY_CERT_CHAIN"},
 	{ERR_FUNC(SSL_F_SSL_WRITE),	"SSL_write"},
+	{ERR_FUNC(SSL_F_TLS1_AEAD_CTX_INIT), "TLS1_AEAD_CTX_INIT"},
 	{ERR_FUNC(SSL_F_TLS1_CERT_VERIFY_MAC),	"tls1_cert_verify_mac"},
-	{ERR_FUNC(SSL_F_TLS1_CHANGE_CIPHER_STATE),	"TLS1_CHANGE_CIPHER_STATE"},
+	{ERR_FUNC(SSL_F_TLS1_CHANGE_CIPHER_STATE), "TLS1_CHANGE_CIPHER_STATE"},
+	{ERR_FUNC(SSL_F_TLS1_CHANGE_CIPHER_STATE_AEAD),	"TLS1_CHANGE_CIPHER_STATE_AEAD"},
+	{ERR_FUNC(SSL_F_TLS1_CHANGE_CIPHER_STATE_CIPHER), "TLS1_CHANGE_CIPHER_STATE_CIPHER"},
 	{ERR_FUNC(SSL_F_TLS1_CHECK_SERVERHELLO_TLSEXT),	"TLS1_CHECK_SERVERHELLO_TLSEXT"},
 	{ERR_FUNC(SSL_F_TLS1_ENC),	"TLS1_ENC"},
 	{ERR_FUNC(SSL_F_TLS1_EXPORT_KEYING_MATERIAL),	"TLS1_EXPORT_KEYING_MATERIAL"},
@@ -344,6 +347,7 @@ static ERR_STRING_DATA SSL_str_reasons[]= {
 	{ERR_REASON(SSL_R_CERT_LENGTH_MISMATCH)  , "cert length mismatch"},
 	{ERR_REASON(SSL_R_CHALLENGE_IS_DIFFERENT), "challenge is different"},
 	{ERR_REASON(SSL_R_CIPHER_CODE_WRONG_LENGTH), "cipher code wrong length"},
+	{ERR_REASON(SSL_R_CIPHER_COMPRESSION_UNAVAILABLE), "cipher compression unavailable"},
 	{ERR_REASON(SSL_R_CIPHER_OR_HASH_UNAVAILABLE), "cipher or hash unavailable"},
 	{ERR_REASON(SSL_R_CIPHER_TABLE_SRC_ERROR), "cipher table src error"},
 	{ERR_REASON(SSL_R_CLIENTHELLO_TLSEXT)    , "clienthello tlsext"},
@@ -452,7 +456,6 @@ static ERR_STRING_DATA SSL_str_reasons[]= {
 	{ERR_REASON(SSL_R_OLD_SESSION_CIPHER_NOT_RETURNED), "old session cipher not returned"},
 	{ERR_REASON(SSL_R_OLD_SESSION_COMPRESSION_ALGORITHM_NOT_RETURNED), "old session compression algorithm not returned"},
 	{ERR_REASON(SSL_R_ONLY_TLS_ALLOWED_IN_FIPS_MODE), "only tls allowed in fips mode"},
-	{ERR_REASON(SSL_R_OPAQUE_PRF_INPUT_TOO_LONG), "opaque PRF input too long"},
 	{ERR_REASON(SSL_R_PACKET_LENGTH_TOO_LONG), "packet length too long"},
 	{ERR_REASON(SSL_R_PARSE_TLSEXT)          , "parse tlsext"},
 	{ERR_REASON(SSL_R_PATH_TOO_LONG)         , "path too long"},
@@ -539,7 +542,7 @@ static ERR_STRING_DATA SSL_str_reasons[]= {
 	{ERR_REASON(SSL_R_TLSV1_UNRECOGNIZED_NAME), "tlsv1 unrecognized name"},
 	{ERR_REASON(SSL_R_TLSV1_UNSUPPORTED_EXTENSION), "tlsv1 unsupported extension"},
 	{ERR_REASON(SSL_R_TLS_CLIENT_CERT_REQ_WITH_ANON_CIPHER), "tls client cert req with anon cipher"},
-	{ERR_REASON(SSL_R_TLS_HEARTBEAT_PEER_DOESNT_ACCEPT), "peer does not accept heartbearts"},
+	{ERR_REASON(SSL_R_TLS_HEARTBEAT_PEER_DOESNT_ACCEPT), "peer does not accept heartbeats"},
 	{ERR_REASON(SSL_R_TLS_HEARTBEAT_PENDING) , "heartbeat request already pending"},
 	{ERR_REASON(SSL_R_TLS_ILLEGAL_EXPORTER_LABEL), "tls illegal exporter label"},
 	{ERR_REASON(SSL_R_TLS_INVALID_ECPOINTFORMAT_LIST), "tls invalid ecpointformat list"},

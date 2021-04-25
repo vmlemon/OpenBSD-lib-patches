@@ -1,4 +1,4 @@
-/* a_strex.c */
+/* $OpenBSD: a_strex.c,v 1.24 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2000.
  */
@@ -58,10 +58,12 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "cryptlib.h"
+
+#include <openssl/asn1.h>
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
-#include <openssl/asn1.h>
+
+#include "asn1_locl.h"
 
 #include "charmap.h"
 
@@ -111,7 +113,7 @@ send_fp_chars(void *arg, const void *buf, int len)
 {
 	if (!arg)
 		return 1;
-	if (fwrite(buf, 1, len, arg) != (unsigned int)len)
+	if (fwrite(buf, 1, (size_t)len, arg) != (size_t)len)
 		return 0;
 	return 1;
 }
@@ -130,7 +132,7 @@ do_esc_char(unsigned long c, unsigned char flags, char *do_quotes,
     char_io *io_ch, void *arg)
 {
 	unsigned char chflgs, chtmp;
-	char tmphex[HEX_SIZE(long) + 3];
+	char tmphex[sizeof(long) * 2 + 3];
 
 	if (c > 0xffffffffL)
 		return -1;
@@ -215,11 +217,15 @@ do_buf(unsigned char *buf, int buflen, int type, unsigned char flags,
 			c |= ((unsigned long)*p++) << 16;
 			c |= ((unsigned long)*p++) << 8;
 			c |= *p++;
+			if (c > UNICODE_MAX || UNICODE_IS_SURROGATE(c))
+				return -1;
 			break;
 
 		case 2:
 			c = ((unsigned long)*p++) << 8;
 			c |= *p++;
+			if (UNICODE_IS_SURROGATE(c))
+				return -1;
 			break;
 
 		case 1:
@@ -227,7 +233,7 @@ do_buf(unsigned char *buf, int buflen, int type, unsigned char flags,
 			break;
 
 		case 0:
-			i = UTF8_getc(p, buflen, &c);
+			i = UTF8_getc(p, q - p, &c);
 			if (i < 0)
 				return -1;	/* Invalid UTF8String */
 			p += i;
@@ -240,7 +246,10 @@ do_buf(unsigned char *buf, int buflen, int type, unsigned char flags,
 		if (type & BUF_TYPE_CONVUTF8) {
 			unsigned char utfbuf[6];
 			int utflen;
+
 			utflen = UTF8_putc(utfbuf, sizeof utfbuf, c);
+			if (utflen < 0)
+				return -1;
 			for (i = 0; i < utflen; i++) {
 				/* We don't need to worry about setting orflags correctly
 				 * because if utflen==1 its value will be correct anyway
@@ -593,7 +602,6 @@ X509_NAME_print_ex(BIO *out, X509_NAME *nm, int indent, unsigned long flags)
 	return do_name_ex(send_bio_chars, out, nm, indent, flags);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 X509_NAME_print_ex_fp(FILE *fp, X509_NAME *nm, int indent, unsigned long flags)
 {
@@ -609,7 +617,6 @@ X509_NAME_print_ex_fp(FILE *fp, X509_NAME *nm, int indent, unsigned long flags)
 	}
 	return do_name_ex(send_fp_chars, fp, nm, indent, flags);
 }
-#endif
 
 int
 ASN1_STRING_print_ex(BIO *out, ASN1_STRING *str, unsigned long flags)
@@ -617,13 +624,11 @@ ASN1_STRING_print_ex(BIO *out, ASN1_STRING *str, unsigned long flags)
 	return do_print_ex(send_bio_chars, out, flags, str);
 }
 
-#ifndef OPENSSL_NO_FP_API
 int
 ASN1_STRING_print_ex_fp(FILE *fp, ASN1_STRING *str, unsigned long flags)
 {
 	return do_print_ex(send_fp_chars, fp, flags, str);
 }
-#endif
 
 /* Utility function: convert any string type to UTF8, returns number of bytes
  * in output string or a negative error code

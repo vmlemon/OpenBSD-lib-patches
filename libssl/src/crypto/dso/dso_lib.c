@@ -1,4 +1,4 @@
-/* dso_lib.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: dso_lib.c,v 1.18 2014/07/11 08:44:48 jsing Exp $ */
 /* Written by Geoff Thorpe (geoff@geoffthorpe.net) for the OpenSSL
  * project 2000.
  */
@@ -57,9 +57,11 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+
 #include <openssl/crypto.h>
-#include "cryptlib.h"
 #include <openssl/dso.h>
+#include <openssl/err.h>
 
 static DSO_METHOD *default_DSO_meth = NULL;
 
@@ -156,11 +158,8 @@ DSO_free(DSO *dso)
 	}
 
 	sk_void_free(dso->meth_data);
-	if (dso->filename != NULL)
-		free(dso->filename);
-	if (dso->loaded_filename != NULL)
-		free(dso->loaded_filename);
-
+	free(dso->filename);
+	free(dso->loaded_filename);
 	free(dso);
 	return (1);
 }
@@ -361,8 +360,7 @@ DSO_set_filename(DSO *dso, const char *filename)
 		DSOerr(DSO_F_DSO_SET_FILENAME, ERR_R_MALLOC_FAILURE);
 		return (0);
 	}
-	if (dso->filename)
-		free(dso->filename);
+	free(dso->filename);
 	dso->filename = copied;
 	return (1);
 }

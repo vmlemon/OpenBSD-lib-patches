@@ -1,4 +1,4 @@
-/* crypto/asn1/asn1_par.c */
+/* $OpenBSD: asn1_par.c,v 1.20 2014/07/12 16:03:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,10 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
+#include <openssl/asn1.h>
 #include <openssl/buffer.h>
 #include <openssl/objects.h>
-#include <openssl/asn1.h>
 
 static int asn1_print_info(BIO *bp, int tag, int xclass, int constructed,
     int indent);
@@ -138,9 +138,7 @@ asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offset,
 	while ((p < tot) && (op < p)) {
 		op = p;
 		j = ASN1_get_object(&p, &len, &tag, &xclass, length);
-#ifdef LINT
-		j = j;
-#endif
+
 		if (j & 0x80) {
 			if (BIO_write(bp, "Error in encoding\n", 18) <= 0)
 				goto end;
@@ -293,10 +291,8 @@ asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offset,
 						nl = 1;
 					}
 				}
-				if (os != NULL) {
-					M_ASN1_OCTET_STRING_free(os);
-					os = NULL;
-				}
+				M_ASN1_OCTET_STRING_free(os);
+				os = NULL;
 			} else if (tag == V_ASN1_INTEGER) {
 				ASN1_INTEGER *bs;
 				int i;
@@ -378,8 +374,7 @@ asn1_parse2(BIO *bp, const unsigned char **pp, long length, int offset,
 end:
 	if (o != NULL)
 		ASN1_OBJECT_free(o);
-	if (os != NULL)
-		M_ASN1_OCTET_STRING_free(os);
+	M_ASN1_OCTET_STRING_free(os);
 	*pp = p;
 	return (ret);
 }

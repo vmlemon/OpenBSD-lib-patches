@@ -1,4 +1,4 @@
-/* crypto/x509/x509_cmp.c */
+/* $OpenBSD: x509_cmp.c,v 1.24 2014/07/13 11:15:54 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,10 +56,14 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1.h>
+#include <openssl/err.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -89,6 +93,8 @@ X509_issuer_and_serial_hash(X509 *a)
 
 	EVP_MD_CTX_init(&ctx);
 	f = X509_NAME_oneline(a->cert_info->issuer, NULL, 0);
+	if (f == NULL)
+		goto err;
 	if (!EVP_DigestInit_ex(&ctx, EVP_md5(), NULL))
 		goto err;
 	if (!EVP_DigestUpdate(&ctx, (unsigned char *)f, strlen(f)))
@@ -258,7 +264,6 @@ X509_NAME_hash_old(X509_NAME *x)
 	/* Make sure X509_NAME structure contains valid cached encoding */
 	i2d_X509_NAME(x, NULL);
 	EVP_MD_CTX_init(&md_ctx);
-	EVP_MD_CTX_set_flags(&md_ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
 	if (EVP_DigestInit_ex(&md_ctx, EVP_md5(), NULL) &&
 	    EVP_DigestUpdate(&md_ctx, x->bytes->data, x->bytes->length) &&
 	    EVP_DigestFinal_ex(&md_ctx, md, NULL))
@@ -355,8 +360,7 @@ X509_check_private_key(X509 *x, EVP_PKEY *k)
 		X509err(X509_F_X509_CHECK_PRIVATE_KEY,
 		    X509_R_UNKNOWN_KEY_TYPE);
 	}
-	if (xk)
-		EVP_PKEY_free(xk);
+	EVP_PKEY_free(xk);
 	if (ret > 0)
 		return 1;
 	return 0;

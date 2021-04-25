@@ -1,4 +1,4 @@
-/* pkcs8.c */
+/* $OpenBSD: pkcs8.c,v 1.21 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999-2004.
  */
@@ -55,18 +55,20 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
 #include <stdio.h>
 #include <string.h>
+
 #include "apps.h"
-#include <openssl/pem.h>
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
 #include <openssl/pkcs12.h>
-
 
 int pkcs8_main(int, char **);
 
-int 
+int
 pkcs8_main(int argc, char **argv)
 {
 	ENGINE *e = NULL;
@@ -89,12 +91,6 @@ pkcs8_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
-
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	informat = FORMAT_PEM;
 	outformat = FORMAT_PEM;
@@ -364,10 +360,8 @@ end:
 	EVP_PKEY_free(pkey);
 	BIO_free_all(out);
 	BIO_free(in);
-	if (passin)
-		free(passin);
-	if (passout)
-		free(passout);
+	free(passin);
+	free(passout);
 
 	return ret;
 }

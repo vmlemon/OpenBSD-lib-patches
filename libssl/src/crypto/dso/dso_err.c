@@ -1,4 +1,4 @@
-/* crypto/dso/dso_err.c */
+/* $OpenBSD: dso_err.c,v 1.8 2014/07/10 22:45:56 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1999-2006 The OpenSSL Project.  All rights reserved.
  *
@@ -59,6 +59,9 @@
  */
 
 #include <stdio.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/err.h>
 #include <openssl/dso.h>
 

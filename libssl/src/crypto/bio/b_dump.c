@@ -1,4 +1,4 @@
-/* crypto/bio/b_dump.c */
+/* $OpenBSD: b_dump.c,v 1.19 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -61,7 +61,8 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/bio.h>
 
 #define TRUNCATE
@@ -145,7 +146,6 @@ BIO_dump_indent_cb(int (*cb)(const void *data, size_t len, void *u),
 	return (ret);
 }
 
-#ifndef OPENSSL_NO_FP_API
 static int
 write_fp(const void *data, size_t len, void *fp)
 {
@@ -163,7 +163,6 @@ BIO_dump_indent_fp(FILE *fp, const char *s, int len, int indent)
 {
 	return BIO_dump_indent_cb(write_fp, fp, s, len, indent);
 }
-#endif
 
 static int
 write_bio(const void *data, size_t len, void *bp)

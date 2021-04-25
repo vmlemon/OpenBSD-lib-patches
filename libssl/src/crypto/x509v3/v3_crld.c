@@ -1,4 +1,4 @@
-/* v3_crld.c */
+/* $OpenBSD: v3_crld.c,v 1.12 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -57,10 +57,12 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/conf.h>
+#include <string.h>
+
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
 #include <openssl/x509v3.h>
 
 static void *v2i_crld(const X509V3_EXT_METHOD *method,

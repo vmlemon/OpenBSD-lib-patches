@@ -4,12 +4,14 @@
 .code	32
 
 .align	5
+#if __ARM_ARCH__>=7
 .global	_armv7_neon_probe
 .type	_armv7_neon_probe,%function
 _armv7_neon_probe:
 	.word	0xf26ee1fe	@ vorr	q15,q15,q15
 	.word	0xe12fff1e	@ bx	lr
 .size	_armv7_neon_probe,.-_armv7_neon_probe
+#endif
 
 .global	OPENSSL_atomic_add
 .type	OPENSSL_atomic_add,%function
@@ -76,24 +78,6 @@ OPENSSL_wipe_cpu:
 	moveq	pc,lr
 	.word	0xe12fff1e	@ bx	lr
 .size	OPENSSL_wipe_cpu,.-OPENSSL_wipe_cpu
-
-.global	OPENSSL_instrument_bus
-.type	OPENSSL_instrument_bus,%function
-OPENSSL_instrument_bus:
-	eor	r0,r0,r0
-	tst	lr,#1
-	moveq	pc,lr
-	.word	0xe12fff1e	@ bx	lr
-.size	OPENSSL_instrument_bus,.-OPENSSL_instrument_bus
-
-.global	OPENSSL_instrument_bus2
-.type	OPENSSL_instrument_bus2,%function
-OPENSSL_instrument_bus2:
-	eor	r0,r0,r0
-	tst	lr,#1
-	moveq	pc,lr
-	.word	0xe12fff1e	@ bx	lr
-.size	OPENSSL_instrument_bus2,.-OPENSSL_instrument_bus2
 
 .align	5
 .LOPENSSL_armcap:

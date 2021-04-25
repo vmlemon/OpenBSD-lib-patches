@@ -1,4 +1,4 @@
-/* crypto/pem/pem_sign.c */
+/* $OpenBSD: pem_sign.c,v 1.11 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,12 +57,13 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/rand.h>
+
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
+#include <openssl/x509.h>
 
 void
 PEM_SignInit(EVP_MD_CTX *ctx, EVP_MD *type)
@@ -85,7 +86,7 @@ PEM_SignFinal(EVP_MD_CTX *ctx, unsigned char *sigret, unsigned int *siglen,
 	int i, ret = 0;
 	unsigned int m_len;
 
-	m = (unsigned char *)malloc(EVP_PKEY_size(pkey) + 2);
+	m = malloc(EVP_PKEY_size(pkey) + 2);
 	if (m == NULL) {
 		PEMerr(PEM_F_PEM_SIGNFINAL, ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -100,7 +101,6 @@ PEM_SignFinal(EVP_MD_CTX *ctx, unsigned char *sigret, unsigned int *siglen,
 
 err:
 	/* ctx has been zeroed by EVP_SignFinal() */
-	if (m != NULL)
-		free(m);
+	free(m);
 	return (ret);
 }

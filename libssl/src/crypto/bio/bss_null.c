@@ -1,4 +1,4 @@
-/* crypto/bio/bss_null.c */
+/* $OpenBSD: bss_null.c,v 1.10 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,9 +56,10 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <errno.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/bio.h>
 
 static int null_write(BIO *h, const char *buf, int num);

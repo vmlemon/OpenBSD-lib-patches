@@ -1,4 +1,4 @@
-/* apps/ca.c */
+/* $OpenBSD: ca.c,v 1.64 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -58,43 +58,34 @@
 
 /* The PPKI stuff has been donated by Jeff Barber <jeffb@issl.atl.hp.com> */
 
+#include <sys/types.h>
+
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
-#include <ctype.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <openssl/conf.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/bn.h>
-#include <openssl/txt_db.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
-#include <openssl/objects.h>
-#include <openssl/ocsp.h>
-#include <openssl/pem.h>
-
-#ifndef W_OK
-#include <sys/file.h>
-#endif
 
 #include "apps.h"
 
-#ifndef W_OK
-#define F_OK 0
-#define X_OK 1
-#define W_OK 2
-#define R_OK 4
-#endif
+#include <openssl/bio.h>
+#include <openssl/bn.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/ocsp.h>
+#include <openssl/pem.h>
+#include <openssl/txt_db.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
-
-#define BASE_SECTION	"ca"
+#define BASE_SECTION		"ca"
 
 #define ENV_DEFAULT_CA		"default_ca"
 
-#define STRING_MASK	"string_mask"
+#define STRING_MASK		"string_mask"
 #define UTF8_IN			"utf8"
 
 #define ENV_DIR			"dir"
@@ -107,7 +98,6 @@
 #define ENV_CRLNUMBER		"crlnumber"
 #define ENV_CRL			"crl"
 #define ENV_PRIVATE_KEY		"private_key"
-#define ENV_RANDFILE		"RANDFILE"
 #define ENV_DEFAULT_DAYS 	"default_days"
 #define ENV_DEFAULT_STARTDATE 	"default_startdate"
 #define ENV_DEFAULT_ENDDATE 	"default_enddate"
@@ -178,12 +168,6 @@ static const char *ca_usage[] = {
 	" -updatedb       - Updates db for expired certificates\n",
 	NULL
 };
-
-#ifdef EFENCE
-extern int EF_PROTECT_FREE;
-extern int EF_PROTECT_BELOW;
-extern int EF_ALIGNMENT;
-#endif
 
 static void lookup_fail(const char *name, const char *tag);
 static int certify(X509 ** xret, char *infile, EVP_PKEY * pkey, X509 * x509,
@@ -307,22 +291,14 @@ ca_main(int argc, char **argv)
 	STACK_OF(CONF_VALUE) * attribs = NULL;
 	STACK_OF(X509) * cert_sk = NULL;
 	STACK_OF(OPENSSL_STRING) * sigopts = NULL;
-#undef BSIZE
 #define BSIZE 256
 	char buf[3][BSIZE];
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
 	char *tofree = NULL;
+	const char *errstr = NULL;
 	DB_ATTR db_attr;
-
-#ifdef EFENCE
-	EF_PROTECT_FREE = 1;
-	EF_PROTECT_BELOW = 1;
-	EF_ALIGNMENT = 0;
-#endif
-
-	signal(SIGPIPE, SIG_IGN);
 
 	conf = NULL;
 	key = NULL;
@@ -330,9 +306,6 @@ ca_main(int argc, char **argv)
 
 	preserve = 0;
 	msie_hack = 0;
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
 
 	argc--;
 	argv++;
@@ -369,7 +342,9 @@ ca_main(int argc, char **argv)
 		} else if (strcmp(*argv, "-days") == 0) {
 			if (--argc < 1)
 				goto bad;
-			days = atoi(*(++argv));
+			days = strtonum(*(++argv), 0, LONG_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		} else if (strcmp(*argv, "-md") == 0) {
 			if (--argc < 1)
 				goto bad;
@@ -436,15 +411,21 @@ ca_main(int argc, char **argv)
 		else if (strcmp(*argv, "-crldays") == 0) {
 			if (--argc < 1)
 				goto bad;
-			crldays = atol(*(++argv));
+			crldays = strtonum(*(++argv), 0, LONG_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		} else if (strcmp(*argv, "-crlhours") == 0) {
 			if (--argc < 1)
 				goto bad;
-			crlhours = atol(*(++argv));
+			crlhours = strtonum(*(++argv), 0, LONG_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		} else if (strcmp(*argv, "-crlsec") == 0) {
 			if (--argc < 1)
 				goto bad;
-			crlsec = atol(*(++argv));
+			crlsec = strtonum(*(++argv), 0, LONG_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		} else if (strcmp(*argv, "-infiles") == 0) {
 			argc--;
 			argv++;
@@ -513,7 +494,11 @@ ca_main(int argc, char **argv)
 #endif
 		else {
 bad:
-			BIO_printf(bio_err, "unknown option %s\n", *argv);
+			if (errstr)
+				BIO_printf(bio_err, "invalid argument %s: %s\n",
+				    *argv, errstr);
+			else
+				BIO_printf(bio_err, "unknown option %s\n", *argv);
 			badops = 1;
 			break;
 		}
@@ -556,12 +541,8 @@ bad:
 			    errorline, configfile);
 		goto err;
 	}
-	if (tofree) {
-		free(tofree);
-		tofree = NULL;
-	}
-	if (!load_config(bio_err, conf))
-		goto err;
+	free(tofree);
+	tofree = NULL;
 
 #ifndef OPENSSL_NO_ENGINE
 	e = setup_engine(bio_err, engine, 0);
@@ -619,20 +600,9 @@ bad:
 	db_attr.unique_subject = 1;
 	p = NCONF_get_string(conf, section, ENV_UNIQUE_SUBJECT);
 	if (p) {
-#ifdef RL_DEBUG
-		BIO_printf(bio_err, "DEBUG: unique_subject = \"%s\"\n", p);
-#endif
 		db_attr.unique_subject = parse_yesno(p, 1);
 	} else
 		ERR_clear_error();
-#ifdef RL_DEBUG
-	if (!p)
-		BIO_printf(bio_err, "DEBUG: unique_subject undefined\n", p);
-#endif
-#ifdef RL_DEBUG
-	BIO_printf(bio_err, "DEBUG: configured unique_subject is %d\n",
-	    db_attr.unique_subject);
-#endif
 
 	in = BIO_new(BIO_s_file());
 	out = BIO_new(BIO_s_file());
@@ -1373,8 +1343,8 @@ bad:
 	ret = 0;
 
 err:
-	if (tofree)
-		free(tofree);
+	free(tofree);
+
 	BIO_free_all(Cout);
 	BIO_free_all(Sout);
 	BIO_free_all(out);
@@ -1399,7 +1369,7 @@ err:
 	NCONF_free(conf);
 	NCONF_free(extconf);
 	OBJ_cleanup();
-	
+
 	return (ret);
 }
 
@@ -1759,7 +1729,7 @@ again2:
 	}
 
 	if (BN_is_zero(serial))
-		row[DB_serial] = BUF_strdup("00");
+		row[DB_serial] = strdup("00");
 	else
 		row[DB_serial] = BN_bn2hex(serial);
 	if (row[DB_serial] == NULL) {
@@ -1981,17 +1951,17 @@ again2:
 		goto err;
 
 	/* We now just add it to the database */
-	row[DB_type] = (char *) malloc(2);
+	row[DB_type] = malloc(2);
 
 	tm = X509_get_notAfter(ret);
-	row[DB_exp_date] = (char *) malloc(tm->length + 1);
+	row[DB_exp_date] = malloc(tm->length + 1);
 	memcpy(row[DB_exp_date], tm->data, tm->length);
 	row[DB_exp_date][tm->length] = '\0';
 
 	row[DB_rev_date] = NULL;
 
 	/* row[DB_serial] done already */
-	row[DB_file] = (char *) malloc(8);
+	row[DB_file] = malloc(8);
 	row[DB_name] = X509_NAME_oneline(X509_get_subject_name(ret), NULL, 0);
 
 	if ((row[DB_type] == NULL) || (row[DB_exp_date] == NULL) ||
@@ -2003,7 +1973,7 @@ again2:
 	row[DB_type][0] = 'V';
 	row[DB_type][1] = '\0';
 
-	if ((irow = (char **)malloc(sizeof(char *) * (DB_NUMBER + 1))) ==
+	if ((irow = reallocarray(NULL, DB_NUMBER + 1, sizeof(char *))) ==
 	    NULL) {
 		BIO_printf(bio_err, "Memory allocation failure\n");
 		goto err;
@@ -2022,8 +1992,7 @@ again2:
 	ok = 1;
 err:
 	for (i = 0; i < DB_NUMBER; i++)
-		if (row[i] != NULL)
-			free(row[i]);
+		free(row[i]);
 
 	if (CAname != NULL)
 		X509_NAME_free(CAname);
@@ -2226,7 +2195,7 @@ do_revoke(X509 * x509, CA_DB * db, int type, char *value)
 	if (!bn)
 		goto err;
 	if (BN_is_zero(bn))
-		row[DB_serial] = BUF_strdup("00");
+		row[DB_serial] = strdup("00");
 	else
 		row[DB_serial] = BN_bn2hex(bn);
 	BN_free(bn);
@@ -2245,17 +2214,17 @@ do_revoke(X509 * x509, CA_DB * db, int type, char *value)
 		    row[DB_serial], row[DB_name]);
 
 		/* We now just add it to the database */
-		row[DB_type] = (char *) malloc(2);
+		row[DB_type] = malloc(2);
 
 		tm = X509_get_notAfter(x509);
-		row[DB_exp_date] = (char *) malloc(tm->length + 1);
+		row[DB_exp_date] = malloc(tm->length + 1);
 		memcpy(row[DB_exp_date], tm->data, tm->length);
 		row[DB_exp_date][tm->length] = '\0';
 
 		row[DB_rev_date] = NULL;
 
 		/* row[DB_serial] done already */
-		row[DB_file] = (char *) malloc(8);
+		row[DB_file] = malloc(8);
 
 		/* row[DB_name] done already */
 
@@ -2268,7 +2237,7 @@ do_revoke(X509 * x509, CA_DB * db, int type, char *value)
 		row[DB_type][0] = 'V';
 		row[DB_type][1] = '\0';
 
-		if ((irow = (char **)malloc(sizeof(char *) *
+		if ((irow = reallocarray(NULL, sizeof(char *),
 		    (DB_NUMBER + 1))) == NULL) {
 			BIO_printf(bio_err, "Memory allocation failure\n");
 			goto err;
@@ -2313,10 +2282,9 @@ do_revoke(X509 * x509, CA_DB * db, int type, char *value)
 	ok = 1;
 
 err:
-	for (i = 0; i < DB_NUMBER; i++) {
-		if (row[i] != NULL)
-			free(row[i]);
-	}
+	for (i = 0; i < DB_NUMBER; i++)
+		free(row[i]);
+
 	return (ok);
 }
 
@@ -2386,10 +2354,9 @@ get_certificate_status(const char *serial, CA_DB * db)
 	}
 
 err:
-	for (i = 0; i < DB_NUMBER; i++) {
-		if (row[i] != NULL)
-			free(row[i]);
-	}
+	for (i = 0; i < DB_NUMBER; i++)
+		free(row[i]);
+
 	return (ok);
 }
 
@@ -2405,7 +2372,7 @@ do_updatedb(CA_DB * db)
 
 	/* get actual time and make a string */
 	a_tm = X509_gmtime_adj(a_tm, 0);
-	a_tm_s = (char *) malloc(a_tm->length + 1);
+	a_tm_s = malloc(a_tm->length + 1);
 	if (a_tm_s == NULL) {
 		cnt = -1;
 		goto err;
@@ -2601,8 +2568,8 @@ make_revoked(X509_REVOKED * rev, const char *str)
 		ret = 1;
 
 err:
-	if (tmp)
-		free(tmp);
+	free(tmp);
+
 	ASN1_OBJECT_free(hold);
 	ASN1_GENERALIZEDTIME_free(comp_time);
 	ASN1_ENUMERATED_free(rtmp);
@@ -2664,7 +2631,10 @@ unpack_revinfo(ASN1_TIME ** prevtm, int *preason, ASN1_OBJECT ** phold,
 	ASN1_OBJECT *hold = NULL;
 	ASN1_GENERALIZEDTIME *comp_time = NULL;
 
-	tmp = BUF_strdup(str);
+	if ((tmp = strdup(str)) == NULL) {
+		BIO_printf(bio_err, "malloc failed\n");
+		goto err;
+	}
 	p = strchr(tmp, ',');
 	rtime_str = tmp;
 
@@ -2745,8 +2715,8 @@ unpack_revinfo(ASN1_TIME ** prevtm, int *preason, ASN1_OBJECT ** phold,
 	ret = 1;
 
 err:
-	if (tmp)
-		free(tmp);
+	free(tmp);
+
 	if (!phold)
 		ASN1_OBJECT_free(hold);
 	if (!pinvtm)

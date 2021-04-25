@@ -2,7 +2,29 @@
 
 =head1 NAME
 
-PEM, PEM_read_bio_PrivateKey, PEM_read_PrivateKey, PEM_write_bio_PrivateKey, PEM_write_PrivateKey, PEM_write_bio_PKCS8PrivateKey, PEM_write_PKCS8PrivateKey, PEM_write_bio_PKCS8PrivateKey_nid, PEM_write_PKCS8PrivateKey_nid, PEM_read_bio_PUBKEY, PEM_read_PUBKEY, PEM_write_bio_PUBKEY, PEM_write_PUBKEY, PEM_read_bio_RSAPrivateKey, PEM_read_RSAPrivateKey, PEM_write_bio_RSAPrivateKey, PEM_write_RSAPrivateKey, PEM_read_bio_RSAPublicKey, PEM_read_RSAPublicKey, PEM_write_bio_RSAPublicKey, PEM_write_RSAPublicKey, PEM_read_bio_RSA_PUBKEY, PEM_read_RSA_PUBKEY, PEM_write_bio_RSA_PUBKEY, PEM_write_RSA_PUBKEY, PEM_read_bio_DSAPrivateKey, PEM_read_DSAPrivateKey, PEM_write_bio_DSAPrivateKey, PEM_write_DSAPrivateKey, PEM_read_bio_DSA_PUBKEY, PEM_read_DSA_PUBKEY, PEM_write_bio_DSA_PUBKEY, PEM_write_DSA_PUBKEY, PEM_read_bio_DSAparams, PEM_read_DSAparams, PEM_write_bio_DSAparams, PEM_write_DSAparams, PEM_read_bio_DHparams, PEM_read_DHparams, PEM_write_bio_DHparams, PEM_write_DHparams, PEM_read_bio_X509, PEM_read_X509, PEM_write_bio_X509, PEM_write_X509, PEM_read_bio_X509_AUX, PEM_read_X509_AUX, PEM_write_bio_X509_AUX, PEM_write_X509_AUX, PEM_read_bio_X509_REQ, PEM_read_X509_REQ, PEM_write_bio_X509_REQ, PEM_write_X509_REQ, PEM_write_bio_X509_REQ_NEW, PEM_write_X509_REQ_NEW, PEM_read_bio_X509_CRL, PEM_read_X509_CRL, PEM_write_bio_X509_CRL, PEM_write_X509_CRL, PEM_read_bio_PKCS7, PEM_read_PKCS7, PEM_write_bio_PKCS7, PEM_write_PKCS7, PEM_read_bio_NETSCAPE_CERT_SEQUENCE, PEM_read_NETSCAPE_CERT_SEQUENCE, PEM_write_bio_NETSCAPE_CERT_SEQUENCE, PEM_write_NETSCAPE_CERT_SEQUENCE - PEM routines
+PEM, PEM_read_bio_PrivateKey, PEM_read_PrivateKey, PEM_write_bio_PrivateKey,
+PEM_write_PrivateKey, PEM_write_bio_PKCS8PrivateKey, PEM_write_PKCS8PrivateKey,
+PEM_write_bio_PKCS8PrivateKey_nid, PEM_write_PKCS8PrivateKey_nid,
+PEM_read_bio_PUBKEY, PEM_read_PUBKEY, PEM_write_bio_PUBKEY, PEM_write_PUBKEY,
+PEM_read_bio_RSAPrivateKey, PEM_read_RSAPrivateKey,
+PEM_write_bio_RSAPrivateKey, PEM_write_RSAPrivateKey,
+PEM_read_bio_RSAPublicKey, PEM_read_RSAPublicKey, PEM_write_bio_RSAPublicKey,
+PEM_write_RSAPublicKey, PEM_read_bio_RSA_PUBKEY, PEM_read_RSA_PUBKEY,
+PEM_write_bio_RSA_PUBKEY, PEM_write_RSA_PUBKEY, PEM_read_bio_DSAPrivateKey,
+PEM_read_DSAPrivateKey, PEM_write_bio_DSAPrivateKey, PEM_write_DSAPrivateKey,
+PEM_read_bio_DSA_PUBKEY, PEM_read_DSA_PUBKEY, PEM_write_bio_DSA_PUBKEY,
+PEM_write_DSA_PUBKEY, PEM_read_bio_DSAparams, PEM_read_DSAparams,
+PEM_write_bio_DSAparams, PEM_write_DSAparams, PEM_read_bio_DHparams,
+PEM_read_DHparams, PEM_write_bio_DHparams, PEM_write_DHparams,
+PEM_read_bio_X509, PEM_read_X509, PEM_write_bio_X509, PEM_write_X509,
+PEM_read_bio_X509_AUX, PEM_read_X509_AUX, PEM_write_bio_X509_AUX,
+PEM_write_X509_AUX, PEM_read_bio_X509_REQ, PEM_read_X509_REQ,
+PEM_write_bio_X509_REQ, PEM_write_X509_REQ, PEM_write_bio_X509_REQ_NEW,
+PEM_write_X509_REQ_NEW, PEM_read_bio_X509_CRL, PEM_read_X509_CRL,
+PEM_write_bio_X509_CRL, PEM_write_X509_CRL, PEM_read_bio_PKCS7, PEM_read_PKCS7,
+PEM_write_bio_PKCS7, PEM_write_PKCS7, PEM_read_bio_NETSCAPE_CERT_SEQUENCE,
+PEM_read_NETSCAPE_CERT_SEQUENCE, PEM_write_bio_NETSCAPE_CERT_SEQUENCE,
+PEM_write_NETSCAPE_CERT_SEQUENCE - PEM routines
 
 =head1 SYNOPSIS
 
@@ -250,7 +272,7 @@ structure. They will also process a trusted X509 certificate but
 any trust settings are discarded.
 
 The B<X509_AUX> functions process a trusted X509 certificate using
-an X509 structure. 
+an X509 structure.
 
 The B<X509_REQ> and B<X509_REQ_NEW> functions process a PKCS#10
 certificate request using an X509_REQ structure. The B<X509_REQ>
@@ -331,71 +353,67 @@ Read a certificate in PEM format from a BIO:
 
  X509 *x;
  x = PEM_read_bio_X509(bp, NULL, 0, NULL);
- if (x == NULL)
-	{
+ if (x == NULL) {
 	/* Error */
-	}
+ }
 
 Alternative method:
 
  X509 *x = NULL;
- if (!PEM_read_bio_X509(bp, &x, 0, NULL))
-	{
+ if (!PEM_read_bio_X509(bp, &x, 0, NULL)) {
 	/* Error */
-	}
+ }
 
 Write a certificate to a BIO:
 
- if (!PEM_write_bio_X509(bp, x))
-	{
+ if (!PEM_write_bio_X509(bp, x)) {
 	/* Error */
-	}
+ }
 
 Write an unencrypted private key to a FILE pointer:
 
- if (!PEM_write_PrivateKey(fp, key, NULL, NULL, 0, 0, NULL))
-	{
+ if (!PEM_write_PrivateKey(fp, key, NULL, NULL, 0, 0, NULL)) {
 	/* Error */
-	}
+ }
 
 Write a private key (using traditional format) to a BIO using
 triple DES encryption, the pass phrase is prompted for:
 
- if (!PEM_write_bio_PrivateKey(bp, key, EVP_des_ede3_cbc(), NULL, 0, 0, NULL))
-	{
+ if (!PEM_write_bio_PrivateKey(bp, key, EVP_des_ede3_cbc(),
+     NULL, 0, 0, NULL)) {
 	/* Error */
-	}
+ }
 
 Write a private key (using PKCS#8 format) to a BIO using triple
 DES encryption, using the pass phrase "hello":
 
- if (!PEM_write_bio_PKCS8PrivateKey(bp, key, EVP_des_ede3_cbc(), NULL, 0, 0, "hello"))
-	{
+ if (!PEM_write_bio_PKCS8PrivateKey(bp, key, EVP_des_ede3_cbc(),
+     NULL, 0, 0, "hello")) {
 	/* Error */
-	}
+ }
 
 Read a private key from a BIO using the pass phrase "hello":
 
  key = PEM_read_bio_PrivateKey(bp, NULL, 0, "hello");
- if (key == NULL)
-	{
+ if (key == NULL) {
 	/* Error */
-	}
+ }
 
 Read a private key from a BIO using a pass phrase callback:
 
  key = PEM_read_bio_PrivateKey(bp, NULL, pass_cb, "My Private Key");
- if (key == NULL)
-	{
+ if (key == NULL) {
 	/* Error */
-	}
+ }
 
 Skeleton pass phrase callback:
 
- int pass_cb(char *buf, int size, int rwflag, void *u);
-	{
+ int
+ pass_cb(char *buf, int size, int rwflag, void *u)
+ {
 	int len;
 	char *tmp;
+
 	/* We'd probably do something else if 'rwflag' is 1 */
 	printf("Enter pass phrase for \"%s\"\n", u);
 
@@ -403,12 +421,14 @@ Skeleton pass phrase callback:
 	tmp = "hello";
 	len = strlen(tmp);
 
-	if (len <= 0) return 0;
+	if (len == 0)
+		return 0;
 	/* if too long, truncate */
-	if (len > size) len = size;
+	if (len > size)
+		len = size;
 	memcpy(buf, tmp, len);
 	return len;
-	}
+ }
 
 =head1 NOTES
 
@@ -435,7 +455,7 @@ which is an uninitialised pointer.
 
 This old B<PrivateKey> routines use a non standard technique for encryption.
 
-The private key (or other data) takes the following form: 
+The private key (or other data) takes the following form:
 
  -----BEGIN RSA PRIVATE KEY-----
  Proc-Type: 4,ENCRYPTED
@@ -461,7 +481,7 @@ an existing structure. Therefore the following:
 
  PEM_read_bio_X509(bp, &x, 0, NULL);
 
-where B<x> already contains a valid certificate, may not work, whereas: 
+where B<x> already contains a valid certificate, may not work, whereas:
 
  X509_free(x);
  x = PEM_read_bio_X509(bp, NULL, 0, NULL);
@@ -474,3 +494,5 @@ The read routines return either a pointer to the structure read or NULL
 if an error occurred.
 
 The write routines return 1 for success or 0 for failure.
+
+=cut

@@ -1,4 +1,4 @@
-/* crypto/ex_data.c */
+/* $OpenBSD: ex_data.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 
 /*
  * Overhaul notes;
@@ -138,7 +138,7 @@
  *
  */
 
-#include "cryptlib.h"
+#include <openssl/err.h>
 #include <openssl/lhash.h>
 
 /* What an "implementation of ex_data functionality" looks like */
@@ -343,8 +343,8 @@ def_add_index(EX_CLASS_ITEM *item, long argl, void *argp,
     CRYPTO_EX_new *new_func, CRYPTO_EX_dup *dup_func, CRYPTO_EX_free *free_func)
 {
 	int toret = -1;
-	CRYPTO_EX_DATA_FUNCS *a = (CRYPTO_EX_DATA_FUNCS *)malloc(
-	    sizeof(CRYPTO_EX_DATA_FUNCS));
+	CRYPTO_EX_DATA_FUNCS *a = malloc(sizeof(CRYPTO_EX_DATA_FUNCS));
+
 	if (!a) {
 		CRYPTOerr(CRYPTO_F_DEF_ADD_INDEX, ERR_R_MALLOC_FAILURE);
 		return -1;
@@ -424,7 +424,7 @@ int_new_ex_data(int class_index, void *obj, CRYPTO_EX_DATA *ad)
 	CRYPTO_r_lock(CRYPTO_LOCK_EX_DATA);
 	mx = sk_CRYPTO_EX_DATA_FUNCS_num(item->meth);
 	if (mx > 0) {
-		storage = malloc(mx * sizeof(CRYPTO_EX_DATA_FUNCS*));
+		storage = reallocarray(NULL, mx, sizeof(CRYPTO_EX_DATA_FUNCS*));
 		if (!storage)
 			goto skip;
 		for (i = 0; i < mx; i++)
@@ -444,8 +444,7 @@ skip:
 			    storage[i]->argl, storage[i]->argp);
 		}
 	}
-	if (storage)
-		free(storage);
+	free(storage);
 	return 1;
 }
 
@@ -469,7 +468,7 @@ int_dup_ex_data(int class_index, CRYPTO_EX_DATA *to, CRYPTO_EX_DATA *from)
 	if (j < mx)
 		mx = j;
 	if (mx > 0) {
-		storage = malloc(mx * sizeof(CRYPTO_EX_DATA_FUNCS*));
+		storage = reallocarray(NULL, mx, sizeof(CRYPTO_EX_DATA_FUNCS*));
 		if (!storage)
 			goto skip;
 		for (i = 0; i < mx; i++)
@@ -489,8 +488,7 @@ skip:
 			    storage[i]->argl, storage[i]->argp);
 		CRYPTO_set_ex_data(to, i, ptr);
 	}
-	if (storage)
-		free(storage);
+	free(storage);
 	return 1;
 }
 
@@ -507,7 +505,7 @@ int_free_ex_data(int class_index, void *obj, CRYPTO_EX_DATA *ad)
 	CRYPTO_r_lock(CRYPTO_LOCK_EX_DATA);
 	mx = sk_CRYPTO_EX_DATA_FUNCS_num(item->meth);
 	if (mx > 0) {
-		storage = malloc(mx * sizeof(CRYPTO_EX_DATA_FUNCS*));
+		storage = reallocarray(NULL, mx, sizeof(CRYPTO_EX_DATA_FUNCS*));
 		if (!storage)
 			goto skip;
 		for (i = 0; i < mx; i++)
@@ -527,8 +525,7 @@ skip:
 			    storage[i]->argl, storage[i]->argp);
 		}
 	}
-	if (storage)
-		free(storage);
+	free(storage);
 	if (ad->sk) {
 		sk_void_free(ad->sk);
 		ad->sk = NULL;

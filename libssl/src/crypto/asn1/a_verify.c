@@ -1,4 +1,4 @@
-/* crypto/asn1/a_verify.c */
+/* $OpenBSD: a_verify.c,v 1.20 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,21 +56,19 @@
  * [including the GNU Public Licence.]
  */
 
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <time.h>
 
-#include "cryptlib.h"
-#include "asn1_locl.h"
-
-#ifndef NO_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-
 #include <openssl/bn.h>
-#include <openssl/x509.h>
-#include <openssl/objects.h>
 #include <openssl/buffer.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/x509.h>
+
+#include "asn1_locl.h"
 
 int
 ASN1_item_verify(const ASN1_ITEM *it, X509_ALGOR *a,

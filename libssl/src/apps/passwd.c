@@ -1,4 +1,4 @@
-/* apps/passwd.c */
+/* $OpenBSD: passwd.c,v 1.23 2014/07/14 00:35:10 deraadt Exp $ */
 
 #if defined OPENSSL_NO_MD5
 #define NO_MD5CRYPT_1
@@ -15,15 +15,14 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+
 #ifndef OPENSSL_NO_DES
 #include <openssl/des.h>
 #endif
+
 #ifndef NO_MD5CRYPT_1
 #include <openssl/md5.h>
 #endif
-
-
-
 
 static unsigned const char cov_2char[64] = {
 	/* from crypto/des/fcrypt.c */
@@ -37,7 +36,7 @@ static unsigned const char cov_2char[64] = {
 	0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7A
 };
 
-static int 
+static int
 do_passwd(int passed_salt, char **salt_p, char **salt_malloc_p,
     char *passwd, BIO * out, int quiet, int table, int reverse,
     size_t pw_maxlen, int usecrypt, int use1, int useapr1);
@@ -56,7 +55,7 @@ do_passwd(int passed_salt, char **salt_p, char **salt_malloc_p,
 
 int passwd_main(int, char **);
 
-int 
+int
 passwd_main(int argc, char **argv)
 {
 	int ret = 1;
@@ -73,14 +72,6 @@ passwd_main(int argc, char **argv)
 	int usecrypt = 0, use1 = 0, useapr1 = 0;
 	size_t pw_maxlen = 0;
 
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto err;
 	out = BIO_new(BIO_s_file());
 	if (out == NULL)
 		goto err;
@@ -249,15 +240,13 @@ passwd_main(int argc, char **argv)
 
 err:
 	ERR_print_errors(bio_err);
-	if (salt_malloc)
-		free(salt_malloc);
-	if (passwd_malloc)
-		free(passwd_malloc);
+	free(salt_malloc);
+	free(passwd_malloc);
 	if (in)
 		BIO_free(in);
 	if (out)
 		BIO_free_all(out);
-	
+
 	return (ret);
 }
 
@@ -377,7 +366,7 @@ md5crypt(const char *passwd, const char *magic, const char *salt)
 #endif
 
 
-static int 
+static int
 do_passwd(int passed_salt, char **salt_p, char **salt_malloc_p,
     char *passwd, BIO * out, int quiet, int table, int reverse,
     size_t pw_maxlen, int usecrypt, int use1, int useapr1)
@@ -460,7 +449,7 @@ err:
 }
 #else
 
-int 
+int
 passwd_main(int argc, char **argv)
 {
 	fputs("Program not available.\n", stderr)

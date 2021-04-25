@@ -1,4 +1,4 @@
-/* crypto/asn1/n_pkey.c */
+/* $OpenBSD: n_pkey.c,v 1.22 2014/07/12 22:26:01 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,15 +57,17 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#include <openssl/objects.h>
-#include <openssl/asn1t.h>
-#include <openssl/asn1_mac.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
+#include <string.h>
 
+#include <openssl/opensslconf.h>
+
+#ifndef OPENSSL_NO_RSA
+#include <openssl/asn1t.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
 
 #ifndef OPENSSL_NO_RC4
 

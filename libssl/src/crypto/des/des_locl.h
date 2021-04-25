@@ -1,4 +1,4 @@
-/* crypto/des/des_locl.h */
+/* $OpenBSD: des_locl.h,v 1.16 2014/07/10 22:45:56 jsing Exp $ */
 /* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,14 +59,14 @@
 #ifndef HEADER_DES_LOCL_H
 #define HEADER_DES_LOCL_H
 
-#include <openssl/e_os2.h>
-
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <unistd.h>
-#include <math.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/des.h>
 
 #define ITERATIONS 16

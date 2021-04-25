@@ -1,12 +1,14 @@
+/* $OpenBSD: o_names.c,v 1.18 2014/06/12 15:49:30 deraadt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <openssl/opensslconf.h>
 
 #include <openssl/err.h>
 #include <openssl/lhash.h>
 #include <openssl/objects.h>
 #include <openssl/safestack.h>
-#include <openssl/e_os2.h>
 
 /* I use the ex_data stuff to manage the identifiers for the obj_name_types
  * that applications may define.  I only really use the free function field.
@@ -43,9 +45,7 @@ OBJ_NAME_init(void)
 {
 	if (names_lh != NULL)
 		return (1);
-	MemCheck_off();
 	names_lh = lh_OBJ_NAME_new();
-	MemCheck_on();
 	return (names_lh != NULL);
 }
 
@@ -58,21 +58,15 @@ OBJ_NAME_new_index(unsigned long (*hash_func)(const char *),
 	int i;
 	NAME_FUNCS *name_funcs;
 
-	if (name_funcs_stack == NULL) {
-		MemCheck_off();
+	if (name_funcs_stack == NULL)
 		name_funcs_stack = sk_NAME_FUNCS_new_null();
-		MemCheck_on();
-	}
-	if (name_funcs_stack == NULL) {
-		/* ERROR */
+	if (name_funcs_stack == NULL)
 		return (0);
-	}
+
 	ret = names_type_num;
 	names_type_num++;
 	for (i = sk_NAME_FUNCS_num(name_funcs_stack); i < names_type_num; i++) {
-		MemCheck_off();
 		name_funcs = malloc(sizeof(NAME_FUNCS));
-		MemCheck_on();
 		if (!name_funcs) {
 			OBJerr(OBJ_F_OBJ_NAME_NEW_INDEX, ERR_R_MALLOC_FAILURE);
 			return (0);
@@ -80,9 +74,7 @@ OBJ_NAME_new_index(unsigned long (*hash_func)(const char *),
 		name_funcs->hash_func = lh_strhash;
 		name_funcs->cmp_func = strcmp;
 		name_funcs->free_func = NULL;
-		MemCheck_off();
 		sk_NAME_FUNCS_push(name_funcs_stack, name_funcs);
-		MemCheck_on();
 	}
 	name_funcs = sk_NAME_FUNCS_value(name_funcs_stack, ret);
 	if (hash_func != NULL)
@@ -175,7 +167,7 @@ OBJ_NAME_add(const char *name, int type, const char *data)
 	alias = type & OBJ_NAME_ALIAS;
 	type &= ~OBJ_NAME_ALIAS;
 
-	onp = (OBJ_NAME *)malloc(sizeof(OBJ_NAME));
+	onp = malloc(sizeof(OBJ_NAME));
 	if (onp == NULL) {
 		/* ERROR */
 		return (0);
@@ -301,7 +293,8 @@ OBJ_NAME_do_all_sorted(int type, void (*fn)(const OBJ_NAME *, void *arg),
 	int n;
 
 	d.type = type;
-	d.names = malloc(lh_OBJ_NAME_num_items(names_lh)*sizeof *d.names);
+	d.names = reallocarray(NULL, lh_OBJ_NAME_num_items(names_lh),
+	    sizeof *d.names);
 	d.n = 0;
 	OBJ_NAME_do_all(type, do_all_sorted_fn, &d);
 

@@ -1,4 +1,4 @@
-/* crypto/ui/ui_openssl.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: ui_openssl.c,v 1.23 2014/07/13 00:10:47 deraadt Exp $ */
 /* Written by Richard Levitte (richard@levitte.org) and others
  * for the OpenSSL project 2001.
  */
@@ -114,25 +114,22 @@
  * [including the GNU Public Licence.]
  */
 
-#include <openssl/e_os2.h>
+#include <sys/ioctl.h>
 
+#include <openssl/opensslconf.h>
+
+#include <errno.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
-
-#include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
 
 #include "ui_locl.h"
-#include "cryptlib.h"
-
-#include <sys/ioctl.h>
 
 #ifndef NX509_SIG
 #define NX509_SIG 32
 #endif
-
 
 /* Define globals.  They are protected by a lock */
 static struct sigaction savsig[NX509_SIG];
@@ -270,7 +267,7 @@ read_string_inner(UI *ui, UI_STRING *uis, int echo, int strip_nl)
 		goto error;
 	if (ferror(tty_in))
 		goto error;
-	if ((p = (char *) strchr(result, '\n')) != NULL) {
+	if ((p = strchr(result, '\n')) != NULL) {
 		if (strip_nl)
 			*p = '\0';
 	} else if (!read_till_nl(tty_in))

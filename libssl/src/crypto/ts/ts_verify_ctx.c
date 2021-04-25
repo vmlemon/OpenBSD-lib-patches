@@ -1,4 +1,4 @@
-/* crypto/ts/ts_verify_ctx.c */
+/* $OpenBSD: ts_verify_ctx.c,v 1.7 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2003.
  */
@@ -56,19 +56,20 @@
  *
  */
 
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/err.h>
 #include <openssl/objects.h>
 #include <openssl/ts.h>
 
 TS_VERIFY_CTX *
 TS_VERIFY_CTX_new(void)
 {
-	TS_VERIFY_CTX *ctx = (TS_VERIFY_CTX *) malloc(sizeof(TS_VERIFY_CTX));
+	TS_VERIFY_CTX *ctx = calloc(1, sizeof(TS_VERIFY_CTX));
 
-	if (ctx)
-		memset(ctx, 0, sizeof(TS_VERIFY_CTX));
-	else
+	if (!ctx)
 		TSerr(TS_F_TS_VERIFY_CTX_NEW, ERR_R_MALLOC_FAILURE);
+
 	return ctx;
 }
 

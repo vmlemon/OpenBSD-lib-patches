@@ -1,4 +1,4 @@
-/* crypto/buffer/buffer.h */
+/* $OpenBSD: buffer.h,v 1.13 2014/07/13 14:13:27 beck Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -58,6 +58,9 @@
 
 #ifndef HEADER_BUFFER_H
 #define HEADER_BUFFER_H
+#if !defined(HAVE_ATTRIBUTE__BOUNDED__) && !defined(__OpenBSD__)
+#define __bounded__(x, y, z)
+#endif
 
 #include <openssl/ossl_typ.h>
 
@@ -66,10 +69,7 @@ extern "C" {
 #endif
 
 #include <stddef.h>
-
-#if !defined(NO_SYS_TYPES_H)
 #include <sys/types.h>
-#endif
 
 /* Already declared in ossl_typ.h */
 /* typedef struct buf_mem_st BUF_MEM; */
@@ -90,8 +90,10 @@ void *	BUF_memdup(const void *data, size_t siz);
 void	BUF_reverse(unsigned char *out, const unsigned char *in, size_t siz);
 
 /* safe string functions */
-size_t BUF_strlcpy(char *dst, const char *src, size_t siz);
-size_t BUF_strlcat(char *dst, const char *src, size_t siz);
+size_t BUF_strlcpy(char *dst, const char *src, size_t siz)
+	__attribute__ ((__bounded__(__string__,1,3)));
+size_t BUF_strlcat(char *dst, const char *src, size_t siz)
+	__attribute__ ((__bounded__(__string__,1,3)));
 
 
 /* BEGIN ERROR CODES */

@@ -1,4 +1,4 @@
-/* e_os2.h */
+/* $OpenBSD: e_os2.h,v 1.19 2014/07/11 10:56:03 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2000 The OpenSSL Project.  All rights reserved.
  *
@@ -53,10 +53,10 @@
  *
  */
 
-#include <openssl/opensslconf.h>
-
 #ifndef HEADER_E_OS2_H
 #define HEADER_E_OS2_H
+
+#include <openssl/opensslconf.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -64,34 +64,16 @@ extern "C" {
 
 #define OPENSSL_SYS_UNIX
 
-/* Specials for I/O an exit */
-# define OPENSSL_EXPORT extern
-# define OPENSSL_IMPORT extern
-# define OPENSSL_GLOBAL
+#define OPENSSL_EXPORT extern
+#define OPENSSL_IMPORT extern
+#define OPENSSL_GLOBAL
 #define OPENSSL_EXTERN OPENSSL_IMPORT
 
-/* Macros to allow global variables to be reached through function calls when
-   required (if a shared library version requires it, for example.
-   The way it's done allows definitions like this:
+#define OPENSSL_IMPLEMENT_GLOBAL(type,name,value) \
+    OPENSSL_GLOBAL type _shadow_##name=value;
+#define OPENSSL_DECLARE_GLOBAL(type,name) OPENSSL_EXPORT type _shadow_##name
+#define OPENSSL_GLOBAL_REF(name) _shadow_##name
 
-	// in foobar.c
-	OPENSSL_IMPLEMENT_GLOBAL(int,foobar,0)
-	// in foobar.h
-	OPENSSL_DECLARE_GLOBAL(int,foobar);
-	#define foobar OPENSSL_GLOBAL_REF(foobar)
-*/
-#ifdef OPENSSL_EXPORT_VAR_AS_FUNCTION
-# define OPENSSL_IMPLEMENT_GLOBAL(type,name,value)			\
-	type *_shadow_##name(void)					\
-	{ static type _hide_##name=value; return &_hide_##name; }
-# define OPENSSL_DECLARE_GLOBAL(type,name) type *_shadow_##name(void)
-# define OPENSSL_GLOBAL_REF(name) (*(_shadow_##name()))
-#else
-# define OPENSSL_IMPLEMENT_GLOBAL(type,name,value) OPENSSL_GLOBAL type _shadow_##name=value;
-# define OPENSSL_DECLARE_GLOBAL(type,name) OPENSSL_EXPORT type _shadow_##name
-# define OPENSSL_GLOBAL_REF(name) _shadow_##name
-#endif
-#  define ossl_ssize_t ssize_t
 #ifdef  __cplusplus
 }
 #endif

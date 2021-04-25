@@ -1,4 +1,4 @@
-/* crypto/asn1/a_bitstr.c */
+/* $OpenBSD: a_bitstr.c,v 1.20 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,8 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
+#include <openssl/err.h>
 
 int
 ASN1_BIT_STRING_set(ASN1_BIT_STRING *x, unsigned char *d, int len)
@@ -158,15 +160,14 @@ c2i_ASN1_BIT_STRING(ASN1_BIT_STRING **a, const unsigned char **pp, long len)
 			i = ERR_R_MALLOC_FAILURE;
 			goto err;
 		}
-		memcpy(s, p, (int)len);
+		memcpy(s, p, len);
 		s[len - 1] &= (0xff << i);
 		p += len;
 	} else
 		s = NULL;
 
 	ret->length = (int)len;
-	if (ret->data != NULL)
-		free(ret->data);
+	free(ret->data);
 	ret->data = s;
 	ret->type = V_ASN1_BIT_STRING;
 	if (a != NULL)

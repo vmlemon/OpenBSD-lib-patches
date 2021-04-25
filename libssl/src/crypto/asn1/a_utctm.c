@@ -1,4 +1,4 @@
-/* crypto/asn1/a_utctm.c */
+/* $OpenBSD: a_utctm.c,v 1.27 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,10 +57,13 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
-#include "cryptlib.h"
-#include "o_time.h"
+
 #include <openssl/asn1.h>
+#include <openssl/err.h>
+
+#include "o_time.h"
 
 int
 ASN1_UTCTIME_check(ASN1_UTCTIME *d)
@@ -149,18 +152,14 @@ ASN1_UTCTIME_set(ASN1_UTCTIME *s, time_t t)
 	return ASN1_UTCTIME_adj(s, t, 0, 0);
 }
 
-ASN1_UTCTIME *
-ASN1_UTCTIME_adj(ASN1_UTCTIME *s, time_t t, int offset_day, long offset_sec)
+static ASN1_UTCTIME *
+ASN1_UTCTIME_adj_internal(ASN1_UTCTIME *s, time_t t, int offset_day,
+    long offset_sec)
 {
 	char *p;
 	struct tm *ts;
 	struct tm data;
 	size_t len = 20;
-
-	if (s == NULL)
-		s = M_ASN1_UTCTIME_new();
-	if (s == NULL)
-		return (NULL);
 
 	ts = gmtime_r(&t, &data);
 	if (ts == NULL)
@@ -181,8 +180,7 @@ ASN1_UTCTIME_adj(ASN1_UTCTIME *s, time_t t, int offset_day, long offset_sec)
 			ASN1err(ASN1_F_ASN1_UTCTIME_ADJ, ERR_R_MALLOC_FAILURE);
 			return (NULL);
 		}
-		if (s->data != NULL)
-			free(s->data);
+		free(s->data);
 		s->data = (unsigned char *)p;
 	}
 
@@ -191,6 +189,25 @@ ASN1_UTCTIME_adj(ASN1_UTCTIME *s, time_t t, int offset_day, long offset_sec)
 	s->length = strlen(p);
 	s->type = V_ASN1_UTCTIME;
 	return (s);
+}
+
+ASN1_UTCTIME *
+ASN1_UTCTIME_adj(ASN1_UTCTIME *s, time_t t, int offset_day, long offset_sec)
+{
+	ASN1_UTCTIME *tmp = NULL, *ret;
+
+	if (s == NULL) {
+		tmp = M_ASN1_UTCTIME_new();
+		if (tmp == NULL)
+			return NULL;
+		s = tmp;
+	}
+
+	ret = ASN1_UTCTIME_adj_internal(s, t, offset_day, offset_sec);
+	if (ret == NULL && tmp != NULL)
+		M_ASN1_UTCTIME_free(tmp);
+
+	return ret;
 }
 
 int

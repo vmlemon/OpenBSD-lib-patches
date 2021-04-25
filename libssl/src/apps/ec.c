@@ -1,4 +1,4 @@
-/* apps/ec.c */
+/* $OpenBSD: ec.c,v 1.16 2014/07/14 00:35:10 deraadt Exp $ */
 /*
  * Written by Nils Larsch for the OpenSSL project.
  */
@@ -57,16 +57,19 @@
  */
 
 #include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_EC
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
-
 
 /* -inform arg    - input format - default PEM (one of DER, NET or PEM)
  * -outform arg   - output format - default PEM
@@ -99,15 +102,6 @@ ec_main(int argc, char **argv)
 	int new_form = 0;
 	int asn1_flag = OPENSSL_EC_NAMED_CURVE;
 	int new_asn1_flag = 0;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	engine = NULL;
 	infile = NULL;
@@ -340,11 +334,9 @@ end:
 		BIO_free_all(out);
 	if (eckey)
 		EC_KEY_free(eckey);
-	if (passin)
-		free(passin);
-	if (passout)
-		free(passout);
-	
+	free(passin);
+	free(passout);
+
 	return (ret);
 }
 #endif

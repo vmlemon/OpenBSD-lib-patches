@@ -1,4 +1,4 @@
-/* crypto/objects/obj_dat.c */
+/* $OpenBSD: obj_dat.c,v 1.30 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,14 +56,18 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <ctype.h>
 #include <limits.h>
-#include "cryptlib.h"
-#include <openssl/lhash.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1.h>
-#include <openssl/objects.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/lhash.h>
+#include <openssl/objects.h>
 
 /* obj_dat.h is generated from objects.h by obj_dat.pl */
 #ifndef OPENSSL_NO_OBJECT
@@ -276,16 +280,16 @@ OBJ_add_object(const ASN1_OBJECT *obj)
 			return (0);
 	if ((o = OBJ_dup(obj)) == NULL)
 		goto err;
-	if (!(ao[ADDED_NID] = (ADDED_OBJ *)malloc(sizeof(ADDED_OBJ))))
+	if (!(ao[ADDED_NID] = malloc(sizeof(ADDED_OBJ))))
 		goto err2;
 	if ((o->length != 0) && (obj->data != NULL))
-		if (!(ao[ADDED_DATA] = (ADDED_OBJ *)malloc(sizeof(ADDED_OBJ))))
+		if (!(ao[ADDED_DATA] = malloc(sizeof(ADDED_OBJ))))
 			goto err2;
 	if (o->sn != NULL)
-		if (!(ao[ADDED_SNAME] = (ADDED_OBJ *)malloc(sizeof(ADDED_OBJ))))
+		if (!(ao[ADDED_SNAME] = malloc(sizeof(ADDED_OBJ))))
 			goto err2;
 	if (o->ln != NULL)
-		if (!(ao[ADDED_LNAME] = (ADDED_OBJ *)malloc(sizeof(ADDED_OBJ))))
+		if (!(ao[ADDED_LNAME] = malloc(sizeof(ADDED_OBJ))))
 			goto err2;
 
 	for (i = ADDED_DATA; i <= ADDED_NID; i++) {
@@ -294,8 +298,7 @@ OBJ_add_object(const ASN1_OBJECT *obj)
 			ao[i]->obj = o;
 			aop = lh_ADDED_OBJ_insert(added, ao[i]);
 			/* memory leak, buit should not normally matter */
-			if (aop != NULL)
-				free(aop);
+			free(aop);
 		}
 	}
 	o->flags &= ~(ASN1_OBJECT_FLAG_DYNAMIC |
@@ -308,10 +311,8 @@ err2:
 	OBJerr(OBJ_F_OBJ_ADD_OBJECT, ERR_R_MALLOC_FAILURE);
 err:
 	for (i = ADDED_DATA; i <= ADDED_NID; i++)
-		if (ao[i] != NULL)
-			free(ao[i]);
-	if (o != NULL)
-		free(o);
+		free(ao[i]);
+	free(o);
 	return (NID_undef);
 }
 
@@ -470,7 +471,7 @@ OBJ_txt2obj(const char *s, int no_name)
 	/* Work out total size */
 	j = ASN1_object_size(0, i, V_ASN1_OBJECT);
 
-	if ((buf = (unsigned char *)malloc(j)) == NULL)
+	if ((buf = malloc(j)) == NULL)
 		return NULL;
 
 	p = buf;
@@ -488,16 +489,14 @@ OBJ_txt2obj(const char *s, int no_name)
 int
 OBJ_obj2txt(char *buf, int buf_len, const ASN1_OBJECT *a, int no_name)
 {
-	int i, n = 0, len, nid, first, use_bn;
-	BIGNUM *bl;
+	int i, ret = 0, len, nid, first = 1, use_bn;
+	BIGNUM *bl = NULL;
+	char *bndec = NULL;
 	unsigned long l;
 	const unsigned char *p;
-	char tbuf[DECIMAL_SIZE(l) + 1];
 
-	if ((a == NULL) || (a->data == NULL)) {
-		buf[0] = '\0';
-		return (0);
-	}
+	if ((a == NULL) || (a->data == NULL))
+		goto err;
 
 	if (!no_name && (nid = OBJ_obj2nid(a)) != NID_undef) {
 		const char *s;
@@ -505,18 +504,13 @@ OBJ_obj2txt(char *buf, int buf_len, const ASN1_OBJECT *a, int no_name)
 		if (s == NULL)
 			s = OBJ_nid2sn(nid);
 		if (s) {
-			if (buf)
-				strlcpy(buf, s, buf_len);
-			n = strlen(s);
-			return n;
+			ret = strlcpy(buf, s, buf_len);
+			goto out;
 		}
 	}
 
 	len = a->length;
 	p = a->data;
-
-	first = 1;
-	bl = NULL;
 
 	while (len > 0) {
 		l = 0;
@@ -560,62 +554,53 @@ OBJ_obj2txt(char *buf, int buf_len, const ASN1_OBJECT *a, int no_name)
 				i = (int)(l / 40);
 				l -= (long)(i * 40);
 			}
-			if (buf && (buf_len > 0)) {
+			if (buf_len > 0) {
 				*buf++ = i + '0';
 				buf_len--;
 			}
-			n++;
+			ret++;
 		}
 
 		if (use_bn) {
-			char *bndec;
 			bndec = BN_bn2dec(bl);
 			if (!bndec)
 				goto err;
-			i = strlen(bndec);
-			if (buf) {
-				if (buf_len > 0) {
-					*buf++ = '.';
-					buf_len--;
-				}
-				strlcpy(buf, bndec, buf_len);
-				if (i > buf_len) {
-					buf += buf_len;
-					buf_len = 0;
-				} else {
-					buf += i;
-					buf_len -= i;
-				}
+			i = snprintf(buf, buf_len, ".%s", bndec);
+			if (i == -1)
+				goto err;
+			if (i >= buf_len) {
+				buf += buf_len;
+				buf_len = 0;
+			} else {
+				buf += i;
+				buf_len -= i;
 			}
-			n++;
-			n += i;
-			free(bndec);
+			ret += i;
 		} else {
-			(void) snprintf(tbuf, sizeof tbuf, ".%lu", l);
-			i = strlen(tbuf);
-			if (buf && (buf_len > 0)) {
-				strlcpy(buf, tbuf, buf_len);
-				if (i > buf_len) {
-					buf += buf_len;
-					buf_len = 0;
-				} else {
-					buf += i;
-					buf_len -= i;
-				}
+			i = snprintf(buf, buf_len, ".%lu", l);
+			if (i == -1)
+				goto err;
+			if (i >= buf_len) {
+				buf += buf_len;
+				buf_len = 0;
+			} else {
+				buf += i;
+				buf_len -= i;
 			}
-			n += i;
+			ret += i;
 			l = 0;
 		}
 	}
 
-	if (bl)
-		BN_free(bl);
-	return n;
+out:
+	free(bndec);
+	BN_free(bl);
+	return ret;
 
 err:
-	if (bl)
-		BN_free(bl);
-	return -1;
+	ret = 0;
+	buf[0] = '\0';
+	goto out;
 }
 
 int
@@ -775,7 +760,7 @@ OBJ_create(const char *oid, const char *sn, const char *ln)
 	if (i <= 0)
 		return (0);
 
-	if ((buf = (unsigned char *)malloc(i)) == NULL) {
+	if ((buf = malloc(i)) == NULL) {
 		OBJerr(OBJ_F_OBJ_CREATE, ERR_R_MALLOC_FAILURE);
 		return (0);
 	}

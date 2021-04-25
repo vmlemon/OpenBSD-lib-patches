@@ -1,4 +1,4 @@
-# $OpenBSD: Makefile,v 1.25 2014/04/16 09:50:10 mpi Exp $
+# $OpenBSD: Makefile,v 1.29 2014/07/11 17:43:41 deraadt Exp $
 
 .include <bsd.own.mk>		# for NOMAN
 
@@ -91,6 +91,8 @@ MAN=	\
 	ssl.3 \
 
 # XXX ERR_load_crypto_strings.3 built by libcrypto
+# XXX PLEASE LEAVE THESE AS TWO PER LINE. DO NOT WRAP.
+# XXX SCRIPTS IN PORTABLE DEPEND ON THIS.
 MLINKS+=\
 	BIO_f_ssl.3 BIO_do_handshake.3 \
 	BIO_f_ssl.3 BIO_get_num_renegotiates.3 \
@@ -122,6 +124,18 @@ MLINKS+=\
 	SSL_CTX_get_verify_mode.3 SSL_get_verify_callback.3 \
 	SSL_CTX_get_verify_mode.3 SSL_get_verify_depth.3 \
 	SSL_CTX_get_verify_mode.3 SSL_get_verify_mode.3 \
+	SSL_CTX_new.3 SSLv23_client_method.3 \
+	SSL_CTX_new.3 SSLv23_method.3 \
+	SSL_CTX_new.3 SSLv23_server_method.3 \
+	SSL_CTX_new.3 SSLv3_client_method.3 \
+	SSL_CTX_new.3 SSLv3_method.3 \
+	SSL_CTX_new.3 SSLv3_server_method.3 \
+	SSL_CTX_new.3 TLSv1_1_client_method.3 \
+	SSL_CTX_new.3 TLSv1_1_method.3 \
+	SSL_CTX_new.3 TLSv1_1_server_method.3 \
+	SSL_CTX_new.3 TLSv1_client_method.3 \
+	SSL_CTX_new.3 TLSv1_method.3 \
+	SSL_CTX_new.3 TLSv1_server_method.3 \
 	SSL_CTX_sess_number.3 SSL_CTX_sess_accept.3 \
 	SSL_CTX_sess_number.3 SSL_CTX_sess_accept_good.3 \
 	SSL_CTX_sess_number.3 SSL_CTX_sess_accept_renegotiate.3 \
@@ -144,8 +158,7 @@ MLINKS+=\
 	SSL_CTX_set_client_CA_list.3 SSL_CTX_add_client_CA.3 \
 	SSL_CTX_set_client_CA_list.3 SSL_add_client_CA.3 \
 	SSL_CTX_set_client_CA_list.3 SSL_set_client_CA_list.3 \
-	SSL_CTX_set_default_passwd_cb.3 \
-	SSL_CTX_set_default_passwd_cb_userdata.3 \
+	SSL_CTX_set_default_passwd_cb.3 SSL_CTX_set_default_passwd_cb_userdata.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_CTX_get_max_cert_list.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_get_max_cert_list.3 \
 	SSL_CTX_set_max_cert_list.3 SSL_set_max_cert_list.3 \

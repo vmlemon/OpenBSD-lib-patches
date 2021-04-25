@@ -1,4 +1,4 @@
-/* crypto/asn1/x_pubkey.c */
+/* $OpenBSD: x_pubkey.c,v 1.22 2014/07/12 16:03:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,16 +57,21 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1t.h>
+#include <openssl/err.h>
 #include <openssl/x509.h>
-#include "asn1_locl.h"
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
+
 #ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
 #endif
+#ifndef OPENSSL_NO_RSA
+#include <openssl/rsa.h>
+#endif
+
+#include "asn1_locl.h"
 
 /* Minor tweak to operation: free up EVP_PKEY */
 static int
@@ -178,8 +183,7 @@ X509_PUBKEY_get(X509_PUBKEY *key)
 	return ret;
 
 error:
-	if (ret != NULL)
-		EVP_PKEY_free(ret);
+	EVP_PKEY_free(ret);
 	return (NULL);
 }
 
@@ -355,8 +359,7 @@ X509_PUBKEY_set0_param(X509_PUBKEY *pub, ASN1_OBJECT *aobj, int ptype,
 	if (!X509_ALGOR_set0(pub->algor, aobj, ptype, pval))
 		return 0;
 	if (penc) {
-		if (pub->public_key->data)
-			free(pub->public_key->data);
+		free(pub->public_key->data);
 		pub->public_key->data = penc;
 		pub->public_key->length = penclen;
 		/* Set number of unused bits to zero */

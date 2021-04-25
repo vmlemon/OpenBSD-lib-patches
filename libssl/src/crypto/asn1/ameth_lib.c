@@ -1,3 +1,4 @@
+/* $OpenBSD: ameth_lib.c,v 1.14 2014/07/13 16:03:09 beck Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2006.
  */
@@ -56,12 +57,17 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1t.h>
 #include <openssl/x509.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+
 #include "asn1_locl.h"
 
 extern const EVP_PKEY_ASN1_METHOD rsa_asn1_meths[];
@@ -97,19 +103,6 @@ static const EVP_PKEY_ASN1_METHOD *standard_methods[] = {
 typedef int sk_cmp_fn_type(const char * const *a, const char * const *b);
 DECLARE_STACK_OF(EVP_PKEY_ASN1_METHOD)
 static STACK_OF(EVP_PKEY_ASN1_METHOD) *app_methods = NULL;
-
-#ifdef TEST
-void
-main()
-{
-	int i;
-	for (i = 0;
-	    i < sizeof(standard_methods) / sizeof(EVP_PKEY_ASN1_METHOD *); i++)
-		fprintf(stderr, "Number %d id=%d (%s)\n", i,
-		    standard_methods[i]->pkey_id,
-		    OBJ_nid2sn(standard_methods[i]->pkey_id));
-}
-#endif
 
 DECLARE_OBJ_BSEARCH_CMP_FN(const EVP_PKEY_ASN1_METHOD *,
     const EVP_PKEY_ASN1_METHOD *, ameth);
@@ -249,11 +242,16 @@ int
 EVP_PKEY_asn1_add_alias(int to, int from)
 {
 	EVP_PKEY_ASN1_METHOD *ameth;
+
 	ameth = EVP_PKEY_asn1_new(from, ASN1_PKEY_ALIAS, NULL, NULL);
 	if (!ameth)
 		return 0;
 	ameth->pkey_base_id = to;
-	return EVP_PKEY_asn1_add0(ameth);
+	if (!EVP_PKEY_asn1_add0(ameth)) {
+		EVP_PKEY_asn1_free(ameth);
+		return 0;
+	}
+	return 1;
 }
 
 int
@@ -296,14 +294,14 @@ EVP_PKEY_asn1_new(int id, int flags, const char *pem_str, const char *info)
 	ameth->pkey_flags = flags | ASN1_PKEY_DYNAMIC;
 
 	if (info) {
-		ameth->info = BUF_strdup(info);
+		ameth->info = strdup(info);
 		if (!ameth->info)
 			goto err;
 	} else
 		ameth->info = NULL;
 
 	if (pem_str) {
-		ameth->pem_str = BUF_strdup(pem_str);
+		ameth->pem_str = strdup(pem_str);
 		if (!ameth->pem_str)
 			goto err;
 	} else
@@ -380,10 +378,8 @@ void
 EVP_PKEY_asn1_free(EVP_PKEY_ASN1_METHOD *ameth)
 {
 	if (ameth && (ameth->pkey_flags & ASN1_PKEY_DYNAMIC)) {
-		if (ameth->pem_str)
-			free(ameth->pem_str);
-		if (ameth->info)
-			free(ameth->info);
+		free(ameth->pem_str);
+		free(ameth->info);
 		free(ameth);
 	}
 }

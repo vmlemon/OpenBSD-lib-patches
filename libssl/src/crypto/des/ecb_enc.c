@@ -1,4 +1,4 @@
-/* crypto/des/ecb_enc.c */
+/* $OpenBSD: ecb_enc.c,v 1.15 2014/07/09 11:10:50 bcook Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,12 +57,8 @@
  */
 
 #include "des_locl.h"
-#include "des_ver.h"
 #include <openssl/opensslv.h>
 #include <openssl/bio.h>
-
-OPENSSL_GLOBAL const char libdes_version[]="libdes" OPENSSL_VERSION_PTEXT;
-OPENSSL_GLOBAL const char DES_version[]="DES" OPENSSL_VERSION_PTEXT;
 
 const char *DES_options(void)
 	{

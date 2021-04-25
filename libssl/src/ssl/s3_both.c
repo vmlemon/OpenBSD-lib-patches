@@ -1,4 +1,4 @@
-/* ssl/s3_both.c */
+/* $OpenBSD: s3_both.c,v 1.26 2014/07/10 08:51:14 tedu Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -256,7 +256,7 @@ ssl3_get_finished(SSL *s, int a, int b)
 		goto f_err;
 	}
 
-	if (CRYPTO_memcmp(p, s->s3->tmp.peer_finish_md, i) != 0) {
+	if (timingsafe_memcmp(p, s->s3->tmp.peer_finish_md, i) != 0) {
 		al = SSL_AD_DECRYPT_ERROR;
 		SSLerr(SSL_F_SSL3_GET_FINISHED, SSL_R_DIGEST_CHECK_FAILED);
 		goto f_err;
@@ -287,7 +287,6 @@ f_err:
  * ssl->s3->read_sequence		zero
  * ssl->s3->read_mac_secret		re-init
  * ssl->session->read_sym_enc		assign
- * ssl->session->read_compression	assign
  * ssl->session->read_hash		assign
  */
 int
@@ -315,7 +314,7 @@ ssl3_add_cert_to_buf(BUF_MEM *buf, unsigned long *l, X509 *x)
 	unsigned char *p;
 
 	n = i2d_X509(x, NULL);
-	if (!BUF_MEM_grow_clean(buf,(int)(n + (*l) + 3))) {
+	if (!BUF_MEM_grow_clean(buf, n + (*l) + 3)) {
 		SSLerr(SSL_F_SSL3_ADD_CERT_TO_BUF, ERR_R_BUF_LIB);
 		return (-1);
 	}
@@ -479,13 +478,7 @@ ssl3_get_message(SSL *s, int st1, int stn, int mt, long max, int *ok)
 			SSLerr(SSL_F_SSL3_GET_MESSAGE, SSL_R_EXCESSIVE_MESSAGE_SIZE);
 			goto f_err;
 		}
-		if (l > (INT_MAX-4)) /* BUF_MEM_grow takes an 'int' parameter */
-		{
-			al = SSL_AD_ILLEGAL_PARAMETER;
-			SSLerr(SSL_F_SSL3_GET_MESSAGE, SSL_R_EXCESSIVE_MESSAGE_SIZE);
-			goto f_err;
-		}
-		if (l && !BUF_MEM_grow_clean(s->init_buf,(int)l + 4)) {
+		if (l && !BUF_MEM_grow_clean(s->init_buf, l + 4)) {
 			SSLerr(SSL_F_SSL3_GET_MESSAGE, ERR_R_BUF_LIB);
 			goto err;
 		}
@@ -550,11 +543,9 @@ ssl_cert_type(X509 *x, EVP_PKEY *pkey)
 	} else if (i == EVP_PKEY_DSA) {
 		ret = SSL_PKEY_DSA_SIGN;
 	}
-#ifndef OPENSSL_NO_EC
 	else if (i == EVP_PKEY_EC) {
 		ret = SSL_PKEY_ECC;
 	}
-#endif
 	else if (i == NID_id_GostR3410_94 || i == NID_id_GostR3410_94_cc) {
 		ret = SSL_PKEY_GOST94;
 	} else if (i == NID_id_GostR3410_2001 || i == NID_id_GostR3410_2001_cc) {
@@ -632,7 +623,7 @@ ssl3_setup_read_buffer(SSL *s)
 	unsigned char *p;
 	size_t len, align = 0, headerlen;
 
-	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
+	if (SSL_IS_DTLS(s))
 		headerlen = DTLS1_RT_HEADER_LENGTH;
 	else
 		headerlen = SSL3_RT_HEADER_LENGTH;
@@ -648,10 +639,6 @@ ssl3_setup_read_buffer(SSL *s)
 			s->s3->init_extra = 1;
 			len += SSL3_RT_MAX_EXTRA;
 		}
-#ifndef OPENSSL_NO_COMP
-		if (!(s->options & SSL_OP_NO_COMPRESSION))
-			len += SSL3_RT_MAX_COMPRESSED_OVERHEAD;
-#endif
 		if ((p = malloc(len)) == NULL)
 			goto err;
 		s->s3->rbuf.buf = p;
@@ -672,7 +659,7 @@ ssl3_setup_write_buffer(SSL *s)
 	unsigned char *p;
 	size_t len, align = 0, headerlen;
 
-	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER)
+	if (SSL_IS_DTLS(s))
 		headerlen = DTLS1_RT_HEADER_LENGTH + 1;
 	else
 		headerlen = SSL3_RT_HEADER_LENGTH;
@@ -684,10 +671,6 @@ ssl3_setup_write_buffer(SSL *s)
 	if (s->s3->wbuf.buf == NULL) {
 		len = s->max_send_fragment +
 		    SSL3_RT_SEND_MAX_ENCRYPTED_OVERHEAD + headerlen + align;
-#ifndef OPENSSL_NO_COMP
-		if (!(s->options & SSL_OP_NO_COMPRESSION))
-			len += SSL3_RT_MAX_COMPRESSED_OVERHEAD;
-#endif
 		if (!(s->options & SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS))
 			len += headerlen + align +
 			    SSL3_RT_SEND_MAX_ENCRYPTED_OVERHEAD;
@@ -719,20 +702,16 @@ ssl3_setup_buffers(SSL *s)
 int
 ssl3_release_write_buffer(SSL *s)
 {
-	if (s->s3->wbuf.buf != NULL) {
-		free(s->s3->wbuf.buf);
-		s->s3->wbuf.buf = NULL;
-	}
+	free(s->s3->wbuf.buf);
+	s->s3->wbuf.buf = NULL;
 	return 1;
 }
 
 int
 ssl3_release_read_buffer(SSL *s)
 {
-	if (s->s3->rbuf.buf != NULL) {
-		free(s->s3->rbuf.buf);
-		s->s3->rbuf.buf = NULL;
-	}
+	free(s->s3->rbuf.buf);
+	s->s3->rbuf.buf = NULL;
 	return 1;
 }
 

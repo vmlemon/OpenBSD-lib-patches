@@ -1,4 +1,4 @@
-/* crypto/asn1/a_bytes.c */
+/* $OpenBSD: a_bytes.c,v 1.18 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,8 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 
 static int asn1_collate_primitive(ASN1_STRING *a, ASN1_const_CTX *c);
 /* type is a 'bitmap' of acceptable string types.
@@ -99,19 +102,18 @@ d2i_ASN1_type_bytes(ASN1_STRING **a, const unsigned char **pp,
 		ret = (*a);
 
 	if (len != 0) {
-		s = malloc((int)len + 1);
+		s = malloc(len + 1);
 		if (s == NULL) {
 			i = ERR_R_MALLOC_FAILURE;
 			goto err;
 		}
-		memcpy(s, p, (int)len);
+		memcpy(s, p, len);
 		s[len]='\0';
 		p += len;
 	} else
 		s = NULL;
 
-	if (ret->data != NULL)
-		free(ret->data);
+	free(ret->data);
 	ret->length = (int)len;
 	ret->data = s;
 	ret->type = tag;
@@ -122,7 +124,7 @@ d2i_ASN1_type_bytes(ASN1_STRING **a, const unsigned char **pp,
 
 err:
 	ASN1err(ASN1_F_D2I_ASN1_TYPE_BYTES, i);
-	if ((ret != NULL) && ((a == NULL) || (*a != ret)))
+	if (a == NULL || *a != ret)
 		ASN1_STRING_free(ret);
 	return (NULL);
 }
@@ -203,8 +205,7 @@ d2i_ASN1_bytes(ASN1_STRING **a, const unsigned char **pp,
 	} else {
 		if (len != 0) {
 			if ((ret->length < len) || (ret->data == NULL)) {
-				if (ret->data != NULL)
-					free(ret->data);
+				free(ret->data);
 				ret->data = NULL;
 				s = malloc(len + 1);
 				if (s == NULL) {
@@ -213,13 +214,12 @@ d2i_ASN1_bytes(ASN1_STRING **a, const unsigned char **pp,
 				}
 			} else
 				s = ret->data;
-			memcpy(s, p, (int)len);
+			memcpy(s, p, len);
 			s[len] = '\0';
 			p += len;
 		} else {
 			s = NULL;
-			if (ret->data != NULL)
-				free(ret->data);
+			free(ret->data);
 		}
 
 		ret->length = (int)len;
@@ -233,7 +233,7 @@ d2i_ASN1_bytes(ASN1_STRING **a, const unsigned char **pp,
 	return (ret);
 
 err:
-	if ((ret != NULL) && ((a == NULL) || (*a != ret)))
+	if (a == NULL || *a != ret)
 		ASN1_STRING_free(ret);
 	ASN1err(ASN1_F_D2I_ASN1_BYTES, i);
 	return (NULL);
@@ -293,18 +293,14 @@ asn1_collate_primitive(ASN1_STRING *a, ASN1_const_CTX *c)
 		goto err;
 
 	a->length = num;
-	if (a->data != NULL)
-		free(a->data);
+	free(a->data);
 	a->data = (unsigned char *)b.data;
-	if (os != NULL)
-		ASN1_STRING_free(os);
+	ASN1_STRING_free(os);
 	return (1);
 
 err:
 	ASN1err(ASN1_F_ASN1_COLLATE_PRIMITIVE, c->error);
-	if (os != NULL)
-		ASN1_STRING_free(os);
-	if (b.data != NULL)
-		free(b.data);
+	ASN1_STRING_free(os);
+	free(b.data);
 	return (0);
 }

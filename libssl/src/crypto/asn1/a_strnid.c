@@ -1,4 +1,4 @@
-/* a_strnid.c */
+/* $OpenBSD: a_strnid.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -56,12 +56,13 @@
  *
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include "cryptlib.h"
-#include <openssl/asn1.h>
-#include <openssl/objects.h>
+#include <stdio.h>
+#include <string.h>
 
+#include <openssl/asn1.h>
+#include <openssl/err.h>
+#include <openssl/objects.h>
 
 static STACK_OF(ASN1_STRING_TABLE) *stable = NULL;
 static void st_free(ASN1_STRING_TABLE *tbl);
@@ -74,7 +75,7 @@ static int sk_table_cmp(const ASN1_STRING_TABLE * const *a,
  * certain software (e.g. Netscape) has problems with them.
  */
 
-static unsigned long global_mask = 0xFFFFFFFFL;
+static unsigned long global_mask = B_ASN1_UTF8STRING;
 
 void
 ASN1_STRING_set_default_mask(unsigned long mask)
@@ -286,34 +287,3 @@ st_free(ASN1_STRING_TABLE *tbl)
 
 
 IMPLEMENT_STACK_OF(ASN1_STRING_TABLE)
-
-#ifdef STRING_TABLE_TEST
-
-main()
-{
-	ASN1_STRING_TABLE *tmp;
-	int i, last_nid = -1;
-
-	for (tmp = tbl_standard, i = 0;
-	    i < sizeof(tbl_standard) / sizeof(ASN1_STRING_TABLE); i++, tmp++) {
-		if (tmp->nid < last_nid) {
-			last_nid = 0;
-			break;
-		}
-		last_nid = tmp->nid;
-	}
-
-	if (last_nid != 0) {
-		printf("Table order OK\n");
-		exit(0);
-	}
-
-	for (tmp = tbl_standard, i = 0;
-	    i < sizeof(tbl_standard) / sizeof(ASN1_STRING_TABLE); i++, tmp++) {
-		printf("Index %d, NID %d, Name=%s\n", i, tmp->nid,
-		    OBJ_nid2ln(tmp->nid));
-	}
-
-}
-
-#endif

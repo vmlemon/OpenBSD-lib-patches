@@ -1,4 +1,4 @@
-/* crypto/srp/srp_vfy.c */
+/* $OpenBSD: srp_vfy.c,v 1.8 2014/07/13 16:03:10 beck Exp $ */
 /* Written by Christophe Renou (christophe.renou@edelweb.fr) with 
  * the precious help of Peter Sylvester (peter.sylvester@edelweb.fr) 
  * for the EdelKey project and contributed to the OpenSSL project 2004.
@@ -56,14 +56,18 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
+#include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_SRP
-#include "cryptlib.h"
-#include "srp_lcl.h"
-#include <openssl/srp.h>
-#include <openssl/evp.h>
+
 #include <openssl/buffer.h>
+#include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/srp.h>
 #include <openssl/txt_db.h>
+
+#include "srp_lcl.h"
 
 #define SRP_RANDOM_SALT_LEN 20
 #define MAX_LEN 2500
@@ -214,9 +218,9 @@ static void SRP_user_pwd_set_gN(SRP_user_pwd *vinfo, const BIGNUM *g,
 static int SRP_user_pwd_set_ids(SRP_user_pwd *vinfo, const char *id,
 				const char *info)
 	{
-	if (id != NULL && NULL == (vinfo->id = BUF_strdup(id)))
+	if (id != NULL && NULL == (vinfo->id = strdup(id)))
 		return 0;
-	return (info == NULL || NULL != (vinfo->info = BUF_strdup(info))) ;
+	return (info == NULL || NULL != (vinfo->info = strdup(info))) ;
 	}
 
 static int SRP_user_pwd_set_sv(SRP_user_pwd *vinfo, const char *s,
@@ -243,7 +247,7 @@ static int SRP_user_pwd_set_sv_BN(SRP_user_pwd *vinfo, BIGNUM *s, BIGNUM *v)
 
 SRP_VBASE *SRP_VBASE_new(char *seed_key)
 	{
-	SRP_VBASE *vb = (SRP_VBASE *) malloc(sizeof(SRP_VBASE));
+	SRP_VBASE *vb = malloc(sizeof(SRP_VBASE));
 
 	if (vb == NULL)
 		return NULL;
@@ -257,7 +261,7 @@ SRP_VBASE *SRP_VBASE_new(char *seed_key)
 	vb->default_N = NULL;
 	vb->seed_key = NULL;
 	if ((seed_key != NULL) && 
-		(vb->seed_key = BUF_strdup(seed_key)) == NULL)
+		(vb->seed_key = strdup(seed_key)) == NULL)
 		{
 		sk_SRP_user_pwd_free(vb->users_pwd);
 		sk_SRP_gN_cache_free(vb->gN_cache);
@@ -283,7 +287,7 @@ static SRP_gN_cache *SRP_gN_new_init(const char *ch)
 	unsigned char tmp[MAX_LEN];
 	int len;
 
-	SRP_gN_cache *newgN = (SRP_gN_cache *)malloc(sizeof(SRP_gN_cache));
+	SRP_gN_cache *newgN = malloc(sizeof(SRP_gN_cache));
 	if (newgN == NULL)
 		return NULL;
 
@@ -395,7 +399,7 @@ int SRP_VBASE_init(SRP_VBASE *vb, char *verifier_file)
 			{
 			/*we add this couple in the internal Stack */
 
-			if ((gN = (SRP_gN *)malloc(sizeof(SRP_gN))) == NULL) 
+			if ((gN = malloc(sizeof(SRP_gN))) == NULL) 
  				goto err;
 
 			if  (!(gN->id = BUF_strdup(pp[DB_srpid]))
@@ -573,7 +577,7 @@ char *SRP_create_verifier(const char *user, const char *pass, char **salt,
 	if(!SRP_create_verifier_BN(user, pass, &s, &v, N_bn, g_bn)) goto err;
 
 	BN_bn2bin(v,tmp);
-	if (((vf = malloc(BN_num_bytes(v)*2)) == NULL))
+	if (((vf = reallocarray(NULL, BN_num_bytes(v), 2)) == NULL))
 		goto err;
 	t_tob64(vf, tmp, BN_num_bytes(v));
 
@@ -582,7 +586,7 @@ char *SRP_create_verifier(const char *user, const char *pass, char **salt,
 		{
 		char *tmp_salt;
 
-		if ((tmp_salt = malloc(SRP_RANDOM_SALT_LEN * 2)) == NULL)
+		if ((tmp_salt = reallocarray(NULL, SRP_RANDOM_SALT_LEN, 2)) == NULL)
 			{
 			free(vf);
 			goto err;

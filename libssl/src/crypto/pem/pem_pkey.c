@@ -1,4 +1,4 @@
-/* crypto/pem/pem_pkey.c */
+/* $OpenBSD: pem_pkey.c,v 1.18 2014/07/12 16:03:37 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,17 +57,22 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/buffer.h>
-#include <openssl/objects.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs12.h>
 #include <openssl/rand.h>
 #include <openssl/x509.h>
-#include <openssl/pkcs12.h>
-#include <openssl/pem.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+
 #include "asn1_locl.h"
 
 int pem_check_suffix(const char *pem_str, const char *suffix);
@@ -94,8 +99,7 @@ PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u)
 			goto p8err;
 		ret = EVP_PKCS82PKEY(p8inf);
 		if (x) {
-			if (*x)
-				EVP_PKEY_free((EVP_PKEY *)*x);
+			EVP_PKEY_free(*x);
 			*x = ret;
 		}
 		PKCS8_PRIV_KEY_INFO_free(p8inf);
@@ -123,8 +127,7 @@ PEM_read_bio_PrivateKey(BIO *bp, EVP_PKEY **x, pem_password_cb *cb, void *u)
 			goto p8err;
 		ret = EVP_PKCS82PKEY(p8inf);
 		if (x) {
-			if (*x)
-				EVP_PKEY_free((EVP_PKEY *)*x);
+			EVP_PKEY_free(*x);
 			*x = ret;
 		}
 		PKCS8_PRIV_KEY_INFO_free(p8inf);
@@ -189,8 +192,7 @@ PEM_read_bio_Parameters(BIO *bp, EVP_PKEY **x)
 			goto err;
 		}
 		if (x) {
-			if (*x)
-				EVP_PKEY_free((EVP_PKEY *)*x);
+			EVP_PKEY_free(*x);
 			*x = ret;
 		}
 	}
@@ -217,7 +219,6 @@ PEM_write_bio_Parameters(BIO *bp, EVP_PKEY *x)
 	    pem_str, bp, x, NULL, NULL, 0, 0, NULL);
 }
 
-#ifndef OPENSSL_NO_FP_API
 EVP_PKEY *
 PEM_read_PrivateKey(FILE *fp, EVP_PKEY **x, pem_password_cb *cb, void *u)
 {
@@ -250,4 +251,3 @@ PEM_write_PrivateKey(FILE *fp, EVP_PKEY *x, const EVP_CIPHER *enc,
 	return ret;
 }
 
-#endif

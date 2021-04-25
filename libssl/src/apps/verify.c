@@ -1,4 +1,4 @@
-/* apps/verify.c */
+/* $OpenBSD: verify.c,v 1.26 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,13 +59,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
+#include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <openssl/pem.h>
-
 
 static int cb(int ok, X509_STORE_CTX * ctx);
 static int check(X509_STORE * ctx, char *file, STACK_OF(X509) * uchain,
@@ -96,15 +97,6 @@ verify_main(int argc, char **argv)
 	X509_STORE_set_verify_cb(cert_ctx, cb);
 
 	ERR_load_crypto_strings();
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	argc--;
 	argv++;
@@ -246,7 +238,7 @@ end:
 	sk_X509_pop_free(untrusted, X509_free);
 	sk_X509_pop_free(trusted, X509_free);
 	sk_X509_CRL_pop_free(crls, X509_CRL_free);
-	
+
 	return (ret < 0 ? 2 : ret);
 }
 

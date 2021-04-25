@@ -1,10 +1,17 @@
-/* crypto/sha/sha512.c */
+/* $OpenBSD: sha512.c,v 1.13 2014/07/11 08:44:49 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 2004 The OpenSSL Project.  All rights reserved
  * according to the OpenSSL license [found in ../../LICENSE].
  * ====================================================================
  */
+
+#include <machine/endian.h>
+
+#include <stdlib.h>
+#include <string.h>
+
 #include <openssl/opensslconf.h>
+
 #if !defined(OPENSSL_NO_SHA) && !defined(OPENSSL_NO_SHA512)
 /*
  * IMPLEMENTATION NOTES.
@@ -41,26 +48,16 @@
  * 16-bit platforms.
  *					<appro@fy.chalmers.se>
  */
-#include <stdlib.h>
-#include <string.h>
-#include <machine/endian.h>
 
 #include <openssl/crypto.h>
-#include <openssl/sha.h>
 #include <openssl/opensslv.h>
+#include <openssl/sha.h>
 
-#include "cryptlib.h"
-
-const char SHA512_version[]="SHA-512" OPENSSL_VERSION_PTEXT;
-
-#if defined(__i386) || defined(__i386__) || defined(_M_IX86) || \
-    defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || \
-    defined(__s390__) || defined(__s390x__) || \
-    defined(SHA512_ASM)
+#if !defined(__STRICT_ALIGNMENT) || defined(SHA512_ASM)
 #define SHA512_BLOCK_CAN_MANAGE_UNALIGNED_DATA
 #endif
 
-fips_md_init_ctx(SHA384, SHA512)
+int SHA384_Init(SHA512_CTX *c)
 	{
 	c->h[0]=U64(0xcbbb9d5dc1059ed8);
 	c->h[1]=U64(0x629a292a367cd507);
@@ -76,7 +73,7 @@ fips_md_init_ctx(SHA384, SHA512)
         return 1;
 	}
 
-fips_md_init(SHA512)
+int SHA512_Init(SHA512_CTX *c)
 	{
 	c->h[0]=U64(0x6a09e667f3bcc908);
 	c->h[1]=U64(0xbb67ae8584caa73b);
@@ -109,7 +106,7 @@ int SHA512_Final (unsigned char *md, SHA512_CTX *c)
 		sha512_block_data_order (c,p,1);
 
 	memset (p+n,0,sizeof(c->u)-16-n);
-#if _BYTE_ORDER == _BIG_ENDIAN
+#if BYTE_ORDER == BIG_ENDIAN
 	c->u.d[SHA_LBLOCK-2] = c->Nh;
 	c->u.d[SHA_LBLOCK-1] = c->Nl;
 #else
@@ -436,7 +433,7 @@ static void sha512_block_data_order (SHA512_CTX *ctx, const void *in, size_t num
 
 	for (i=0;i<16;i++)
 		{
-#if _BYTE_ORDER == _BIG_ENDIAN
+#if BYTE_ORDER == BIG_ENDIAN
 		T1 = X[i] = W[i];
 #else
 		T1 = X[i] = PULL64(W[i]);
@@ -491,7 +488,7 @@ static void sha512_block_data_order (SHA512_CTX *ctx, const void *in, size_t num
 	a = ctx->h[0];	b = ctx->h[1];	c = ctx->h[2];	d = ctx->h[3];
 	e = ctx->h[4];	f = ctx->h[5];	g = ctx->h[6];	h = ctx->h[7];
 
-#if _BYTE_ORDER == _BIG_ENDIAN
+#if BYTE_ORDER == BIG_ENDIAN
 	T1 = X[0] = W[0];	ROUND_00_15(0,a,b,c,d,e,f,g,h);
 	T1 = X[1] = W[1];	ROUND_00_15(1,h,a,b,c,d,e,f,g);
 	T1 = X[2] = W[2];	ROUND_00_15(2,g,h,a,b,c,d,e,f);

@@ -1,3 +1,4 @@
+/* $OpenBSD: pvkfmt.c,v 1.11 2014/07/12 16:03:37 miod Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2005.
  */
@@ -59,10 +60,15 @@
  * and PRIVATEKEYBLOB).
  */
 
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
+#include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
-#include <openssl/bn.h>
+
 #if !defined(OPENSSL_NO_RSA) && !defined(OPENSSL_NO_DSA)
 #include <openssl/dsa.h>
 #include <openssl/rsa.h>
@@ -293,8 +299,7 @@ do_b2i_bio(BIO *in, int ispub)
 		ret = b2i_rsa(&p, length, bitlen, ispub);
 
 err:
-	if (buf)
-		free(buf);
+	free(buf);
 	return ret;
 }
 
@@ -344,12 +349,9 @@ b2i_dss(const unsigned char **in, unsigned int length, unsigned int bitlen,
 
 memerr:
 	PEMerr(PEM_F_B2I_DSS, ERR_R_MALLOC_FAILURE);
-	if (dsa)
-		DSA_free(dsa);
-	if (ret)
-		EVP_PKEY_free(ret);
-	if (ctx)
-		BN_CTX_free(ctx);
+	DSA_free(dsa);
+	EVP_PKEY_free(ret);
+	BN_CTX_free(ctx);
 	return NULL;
 }
 
@@ -397,10 +399,8 @@ b2i_rsa(const unsigned char **in, unsigned int length, unsigned int bitlen,
 
 memerr:
 	PEMerr(PEM_F_B2I_RSA, ERR_R_MALLOC_FAILURE);
-	if (rsa)
-		RSA_free(rsa);
-	if (ret)
-		EVP_PKEY_free(ret);
+	RSA_free(rsa);
+	EVP_PKEY_free(ret);
 	return NULL;
 }
 
@@ -717,13 +717,14 @@ do_PVK_body(const unsigned char **in, unsigned int saltlen,
 	const unsigned char *p = *in;
 	unsigned int magic;
 	unsigned char *enctmp = NULL, *q;
-
 	EVP_CIPHER_CTX cctx;
+
 	EVP_CIPHER_CTX_init(&cctx);
 	if (saltlen) {
 		char psbuf[PEM_BUFSIZE];
 		unsigned char keybuf[20];
 		int enctmplen, inlen;
+
 		if (cb)
 			inlen = cb(psbuf, PEM_BUFSIZE, 0, u);
 		else
@@ -737,8 +738,8 @@ do_PVK_body(const unsigned char **in, unsigned int saltlen,
 			PEMerr(PEM_F_DO_PVK_BODY, ERR_R_MALLOC_FAILURE);
 			return NULL;
 		}
-		if (!derive_pvk_key(keybuf, p, saltlen,
-			    (unsigned char *)psbuf, inlen)) {
+		if (!derive_pvk_key(keybuf, p, saltlen, (unsigned char *)psbuf,
+		    inlen)) {
 			free(enctmp);
 			return NULL;
 		}
@@ -746,6 +747,11 @@ do_PVK_body(const unsigned char **in, unsigned int saltlen,
 		/* Copy BLOBHEADER across, decrypt rest */
 		memcpy(enctmp, p, 8);
 		p += 8;
+		if (keylen < 8) {
+			PEMerr(PEM_F_DO_PVK_BODY, PEM_R_PVK_TOO_SHORT);
+			free(enctmp);
+			return NULL;
+		}
 		inlen = keylen - 8;
 		q = enctmp + 8;
 		if (!EVP_DecryptInit_ex(&cctx, EVP_rc4(), NULL, keybuf, NULL))

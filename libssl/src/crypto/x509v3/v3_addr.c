@@ -1,3 +1,4 @@
+/* $OpenBSD: v3_addr.c,v 1.13 2014/07/13 16:03:10 beck Exp $ */
 /*
  * Contributed to the OpenSSL Project by the American Registry for
  * Internet Numbers ("ARIN").
@@ -62,11 +63,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cryptlib.h"
-#include <openssl/conf.h>
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
 #include <openssl/buffer.h>
+#include <openssl/conf.h>
 #include <openssl/x509v3.h>
 
 #ifndef OPENSSL_NO_RFC3779
@@ -1030,9 +1032,9 @@ v2i_IPAddrBlocks(const struct v3_ext_method *method, struct v3_ext_ctx *ctx,
 				goto err;
 			}
 			t += strspn(t, " \t");
-			s = BUF_strdup(t);
+			s = strdup(t);
 		} else {
-			s = BUF_strdup(val->value);
+			s = strdup(val->value);
 		}
 		if (s == NULL) {
 			X509V3err(X509V3_F_V2I_IPADDRBLOCKS,

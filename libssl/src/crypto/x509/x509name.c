@@ -1,4 +1,4 @@
-/* crypto/x509/x509name.c */
+/* $OpenBSD: x509name.c,v 1.12 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,13 @@
  */
 
 #include <stdio.h>
-#include <openssl/stack.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
-#include <openssl/objects.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/stack.h>
 #include <openssl/x509.h>
 
 int

@@ -1,4 +1,4 @@
-/* ssl/tls1.h */
+/* $OpenBSD: tls1.h,v 1.19 2014/06/13 13:28:53 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -239,13 +239,6 @@ extern "C" {
 /* ExtensionType value from RFC4507 */
 #define TLSEXT_TYPE_session_ticket		35
 
-/* ExtensionType value from draft-rescorla-tls-opaque-prf-input-00.txt */
-#if 0   /* will have to be provided externally for now ,
-	 * i.e. build with - DTLSEXT_TYPE_opaque_prf_input = 38183
-	 * using whatever extension number you'd like to try */
-# define TLSEXT_TYPE_opaque_prf_input		?? */
-#endif
-
 /* Temporary extension type */
 #define TLSEXT_TYPE_renegotiate                 0xff01
 
@@ -281,7 +274,6 @@ extern "C" {
 #define TLSEXT_hash_sha384				5
 #define TLSEXT_hash_sha512				6
 
-#ifndef OPENSSL_NO_TLSEXT
 
 #define TLSEXT_MAXLEN_host_name 255
 
@@ -350,17 +342,9 @@ SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB,(void (*)(void))cb)
 #define SSL_CTX_set_tlsext_status_arg(ssl, arg) \
 SSL_CTX_ctrl(ssl,SSL_CTRL_SET_TLSEXT_STATUS_REQ_CB_ARG,0, (void *)arg)
 
-#define SSL_set_tlsext_opaque_prf_input(s, src, len) \
-SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_OPAQUE_PRF_INPUT, len, src)
-#define SSL_CTX_set_tlsext_opaque_prf_input_callback(ctx, cb) \
-SSL_CTX_callback_ctrl(ctx,SSL_CTRL_SET_TLSEXT_OPAQUE_PRF_INPUT_CB, (void (*)(void))cb)
-#define SSL_CTX_set_tlsext_opaque_prf_input_callback_arg(ctx, arg) \
-SSL_CTX_ctrl(ctx,SSL_CTRL_SET_TLSEXT_OPAQUE_PRF_INPUT_CB_ARG, 0, arg)
-
 #define SSL_CTX_set_tlsext_ticket_key_cb(ssl, cb) \
 SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)
 
-#endif
 
 /* PSK ciphersuites from 4279 */
 #define TLS1_CK_PSK_WITH_RC4_128_SHA                    0x0300008A
@@ -495,7 +479,6 @@ SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)
 #define TLS1_CK_SRP_SHA_DSS_WITH_AES_256_CBC_SHA	0x0300C022
 
 /* ECDH HMAC based ciphersuites from RFC5289 */
-
 #define TLS1_CK_ECDHE_ECDSA_WITH_AES_128_SHA256         0x0300C023
 #define TLS1_CK_ECDHE_ECDSA_WITH_AES_256_SHA384         0x0300C024
 #define TLS1_CK_ECDH_ECDSA_WITH_AES_128_SHA256          0x0300C025
@@ -514,6 +497,11 @@ SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)
 #define TLS1_CK_ECDHE_RSA_WITH_AES_256_GCM_SHA384       0x0300C030
 #define TLS1_CK_ECDH_RSA_WITH_AES_128_GCM_SHA256        0x0300C031
 #define TLS1_CK_ECDH_RSA_WITH_AES_256_GCM_SHA384        0x0300C032
+
+/* ChaCha20-Poly1305 based ciphersuites. */
+#define TLS1_CK_ECDHE_RSA_CHACHA20_POLY1305		0x0300CC13
+#define TLS1_CK_ECDHE_ECDSA_CHACHA20_POLY1305		0x0300CC14
+#define TLS1_CK_DHE_RSA_CHACHA20_POLY1305		0x0300CC15
 
 /* XXX
  * Inconsistency alert:
@@ -665,6 +653,11 @@ SSL_CTX_callback_ctrl(ssl,SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB,(void (*)(void))cb)
 #define TLS1_TXT_ECDHE_RSA_WITH_AES_256_GCM_SHA384      "ECDHE-RSA-AES256-GCM-SHA384"
 #define TLS1_TXT_ECDH_RSA_WITH_AES_128_GCM_SHA256       "ECDH-RSA-AES128-GCM-SHA256"
 #define TLS1_TXT_ECDH_RSA_WITH_AES_256_GCM_SHA384       "ECDH-RSA-AES256-GCM-SHA384"
+
+/* ChaCha20-Poly1305 based ciphersuites. */
+#define TLS1_TXT_ECDHE_RSA_WITH_CHACHA20_POLY1305	"ECDHE-RSA-CHACHA20-POLY1305"
+#define TLS1_TXT_ECDHE_ECDSA_WITH_CHACHA20_POLY1305	"ECDHE-ECDSA-CHACHA20-POLY1305"
+#define TLS1_TXT_DHE_RSA_WITH_CHACHA20_POLY1305		"DHE-RSA-CHACHA20-POLY1305"
 
 #define TLS_CT_RSA_SIGN			1
 #define TLS_CT_DSS_SIGN			2

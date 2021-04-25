@@ -1,4 +1,4 @@
-/* crypto/asn1/a_i2d_fp.c */
+/* $OpenBSD: a_i2d_fp.c,v 1.14 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,13 +57,13 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/buffer.h>
+
 #include <openssl/asn1.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 
 #ifndef NO_OLD_ASN1
 
-#ifndef OPENSSL_NO_FP_API
 int
 ASN1_i2d_fp(i2d_of_void *i2d, FILE *out, void *x)
 {
@@ -79,7 +79,6 @@ ASN1_i2d_fp(i2d_of_void *i2d, FILE *out, void *x)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 ASN1_i2d_bio(i2d_of_void *i2d, BIO *out, unsigned char *x)
@@ -115,7 +114,6 @@ ASN1_i2d_bio(i2d_of_void *i2d, BIO *out, unsigned char *x)
 
 #endif
 
-#ifndef OPENSSL_NO_FP_API
 int
 ASN1_item_i2d_fp(const ASN1_ITEM *it, FILE *out, void *x)
 {
@@ -131,7 +129,6 @@ ASN1_item_i2d_fp(const ASN1_ITEM *it, FILE *out, void *x)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 ASN1_item_i2d_bio(const ASN1_ITEM *it, BIO *out, void *x)

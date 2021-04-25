@@ -1,4 +1,4 @@
-/* crypto/ui/ui.h -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: ui.h,v 1.9 2014/07/10 22:45:58 jsing Exp $ */
 /* Written by Richard Levitte (richard@levitte.org) for the OpenSSL
  * project 2001.
  */
@@ -58,6 +58,8 @@
 
 #ifndef HEADER_UI_H
 #define HEADER_UI_H
+
+#include <openssl/opensslconf.h>
 
 #ifndef OPENSSL_NO_DEPRECATED
 #include <openssl/crypto.h>

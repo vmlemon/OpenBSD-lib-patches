@@ -1,4 +1,4 @@
-/* apps/req.c */
+/* $OpenBSD: req.c,v 1.46 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -64,25 +64,26 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <limits.h>
 #include <string.h>
+#include <time.h>
+
 #include "apps.h"
+
+#include <openssl/asn1.h>
 #include <openssl/bio.h>
-#include <openssl/evp.h>
+#include <openssl/bn.h>
 #include <openssl/conf.h>
 #include <openssl/err.h>
-#include <openssl/asn1.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
+#include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/pem.h>
-#include <openssl/bn.h>
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
-#ifndef OPENSSL_NO_DSA
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+
 #include <openssl/dsa.h>
-#endif
+
+#include <openssl/rsa.h>
 
 #define SECTION		"req"
 
@@ -111,7 +112,6 @@
  * -config file	- Load configuration file.
  * -key file	- make a request using key in file (or use it for verification).
  * -keyform arg	- key file format.
- * -rand file(s) - load the file(s) into the PRNG.
  * -newkey	- make a key and a request.
  * -modulus	- print RSA modulus.
  * -pubkey	- output Public Key.
@@ -175,7 +175,6 @@ req_main(int argc, char **argv)
 	const EVP_CIPHER *cipher = NULL;
 	ASN1_INTEGER *serial = NULL;
 	int modulus = 0;
-	char *inrand = NULL;
 	char *passargin = NULL, *passargout = NULL;
 	char *passin = NULL, *passout = NULL;
 	char *p;
@@ -188,11 +187,6 @@ req_main(int argc, char **argv)
 #ifndef OPENSSL_NO_DES
 	cipher = EVP_des_ede3_cbc();
 #endif
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
 
 	infile = NULL;
 	outfile = NULL;
@@ -263,10 +257,6 @@ req_main(int argc, char **argv)
 			if (--argc < 1)
 				goto bad;
 			passargout = *(++argv);
-		} else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
 		} else if (strcmp(*argv, "-newkey") == 0) {
 			if (--argc < 1)
 				goto bad;
@@ -329,11 +319,16 @@ req_main(int argc, char **argv)
 		} else if (strcmp(*argv, "-multivalue-rdn") == 0)
 			multirdn = 1;
 		else if (strcmp(*argv, "-days") == 0) {
+			const char *errstr;
+
 			if (--argc < 1)
 				goto bad;
-			days = atoi(*(++argv));
-			if (days == 0)
+			days = strtonum(*(++argv), 1, INT_MAX, &errstr);
+			if (errstr) {
+				BIO_printf(bio_err, "bad -days %s, using 0: %s\n",
+				    *argv, errstr);
 				days = 30;
+			}
 		} else if (strcmp(*argv, "-set_serial") == 0) {
 			if (--argc < 1)
 				goto bad;
@@ -382,14 +377,9 @@ bad:
 		BIO_printf(bio_err, " -key file      use the private key contained in file\n");
 		BIO_printf(bio_err, " -keyform arg   key file format\n");
 		BIO_printf(bio_err, " -keyout arg    file to send the key to\n");
-		BIO_printf(bio_err, " -rand file:file:...\n");
-		BIO_printf(bio_err, "                load the file (or the files in the directory) into\n");
-		BIO_printf(bio_err, "                the random number generator\n");
 		BIO_printf(bio_err, " -newkey rsa:bits generate a new RSA key of 'bits' in size\n");
 		BIO_printf(bio_err, " -newkey dsa:file generate a new DSA key, parameters taken from CA in 'file'\n");
-#ifndef OPENSSL_NO_ECDSA
 		BIO_printf(bio_err, " -newkey ec:file generate a new EC key, parameters taken from CA in 'file'\n");
-#endif
 		BIO_printf(bio_err, " -[digest]      Digest to sign with (md5, sha1, md2, mdc2, md4)\n");
 		BIO_printf(bio_err, " -config file   request template file.\n");
 		BIO_printf(bio_err, " -subj arg      set or modify request subject\n");
@@ -852,11 +842,9 @@ loop:
 			goto end;
 		}
 		fprintf(stdout, "Modulus=");
-#ifndef OPENSSL_NO_RSA
 		if (EVP_PKEY_base_id(tpubkey) == EVP_PKEY_RSA)
 			BN_print(out, tpubkey->pkey.rsa->n);
 		else
-#endif
 			fprintf(stdout, "Wrong Algorithm type");
 		EVP_PKEY_free(tpubkey);
 		fprintf(stdout, "\n");
@@ -912,8 +900,7 @@ end:
 	if (gen_eng)
 		ENGINE_free(gen_eng);
 #endif
-	if (keyalgstr)
-		free(keyalgstr);
+	free(keyalgstr);
 	X509_REQ_free(req);
 	X509_free(x509ss);
 	ASN1_INTEGER_free(serial);
@@ -922,11 +909,11 @@ end:
 	if (passargout && passout)
 		free(passout);
 	OBJ_cleanup();
-	
+
 	return (ex);
 }
 
-static int 
+static int
 make_REQ(X509_REQ * req, EVP_PKEY * pkey, char *subj, int multirdn,
     int attribs, unsigned long chtype)
 {
@@ -991,7 +978,7 @@ err:
  * subject is expected to be in the format /type0=value0/type1=value1/type2=...
  * where characters may be escaped by \
  */
-static int 
+static int
 build_subject(X509_REQ * req, char *subject, unsigned long chtype, int multirdn)
 {
 	X509_NAME *n;
@@ -1008,7 +995,7 @@ build_subject(X509_REQ * req, char *subject, unsigned long chtype, int multirdn)
 }
 
 
-static int 
+static int
 prompt_info(X509_REQ * req,
     STACK_OF(CONF_VALUE) * dn_sk, char *dn_sect,
     STACK_OF(CONF_VALUE) * attr_sk, char *attr_sect, int attribs,
@@ -1193,7 +1180,7 @@ start2:			for (;;) {
 
 }
 
-static int 
+static int
 auto_info(X509_REQ * req, STACK_OF(CONF_VALUE) * dn_sk,
     STACK_OF(CONF_VALUE) * attr_sk, int attribs, unsigned long chtype)
 {
@@ -1248,7 +1235,7 @@ auto_info(X509_REQ * req, STACK_OF(CONF_VALUE) * dn_sk,
 }
 
 
-static int 
+static int
 add_DN_object(X509_NAME * n, char *text, const char *def, char *value,
     int nid, int n_min, int n_max, unsigned long chtype, int mval)
 {
@@ -1299,7 +1286,7 @@ err:
 	return (ret);
 }
 
-static int 
+static int
 add_attribute_object(X509_REQ * req, char *text, const char *def,
     char *value, int nid, int n_min,
     int n_max, unsigned long chtype)
@@ -1356,7 +1343,7 @@ err:
 	return (0);
 }
 
-static int 
+static int
 req_check_len(int len, int n_min, int n_max)
 {
 	if ((n_min > 0) && (len < n_min)) {
@@ -1371,7 +1358,7 @@ req_check_len(int len, int n_min, int n_max)
 }
 
 /* Check if the end of a string matches 'end' */
-static int 
+static int
 check_end(const char *str, const char *end)
 {
 	int elen, slen;
@@ -1394,13 +1381,18 @@ set_keygen_ctx(BIO * err, const char *gstr, int *pkey_type,
 	long keylen = -1;
 	BIO *pbio = NULL;
 	const char *paramfile = NULL;
+	const char *errstr;
 
 	if (gstr == NULL) {
 		*pkey_type = EVP_PKEY_RSA;
 		keylen = *pkeylen;
 	} else if (gstr[0] >= '0' && gstr[0] <= '9') {
 		*pkey_type = EVP_PKEY_RSA;
-		keylen = atol(gstr);
+		keylen = strtonum(gstr, 0, LONG_MAX, &errstr);
+		if (errstr) {
+			BIO_printf(err, "bad algorithm %s: %s\n", gstr, errstr);
+			return NULL;
+		}
 		*pkeylen = keylen;
 	} else if (!strncmp(gstr, "param:", 6))
 		paramfile = gstr + 6;
@@ -1433,7 +1425,12 @@ set_keygen_ctx(BIO * err, const char *gstr, int *pkey_type,
 #endif
 		if (*pkey_type == EVP_PKEY_RSA) {
 			if (p) {
-				keylen = atol(p + 1);
+				keylen = strtonum(p + 1, 0, LONG_MAX, &errstr);
+				if (errstr) {
+					BIO_printf(err, "bad algorithm %s: %s\n",
+					    p + 1, errstr);
+					return NULL;
+				}
 				*pkeylen = keylen;
 			} else
 				keylen = *pkeylen;
@@ -1507,7 +1504,6 @@ set_keygen_ctx(BIO * err, const char *gstr, int *pkey_type,
 		ERR_print_errors(err);
 		return NULL;
 	}
-#ifndef OPENSSL_NO_RSA
 	if ((*pkey_type == EVP_PKEY_RSA) && (keylen != -1)) {
 		if (EVP_PKEY_CTX_set_rsa_keygen_bits(gctx, keylen) <= 0) {
 			BIO_puts(err, "Error setting RSA keysize\n");
@@ -1516,12 +1512,11 @@ set_keygen_ctx(BIO * err, const char *gstr, int *pkey_type,
 			return NULL;
 		}
 	}
-#endif
 
 	return gctx;
 }
 
-static int 
+static int
 genpkey_cb(EVP_PKEY_CTX * ctx)
 {
 	char c = '*';
@@ -1541,7 +1536,7 @@ genpkey_cb(EVP_PKEY_CTX * ctx)
 	return 1;
 }
 
-static int 
+static int
 do_sign_init(BIO * err, EVP_MD_CTX * ctx, EVP_PKEY * pkey,
     const EVP_MD * md, STACK_OF(OPENSSL_STRING) * sigopts)
 {
@@ -1561,7 +1556,7 @@ do_sign_init(BIO * err, EVP_MD_CTX * ctx, EVP_PKEY * pkey,
 	return 1;
 }
 
-int 
+int
 do_X509_sign(BIO * err, X509 * x, EVP_PKEY * pkey, const EVP_MD * md,
     STACK_OF(OPENSSL_STRING) * sigopts)
 {
@@ -1576,7 +1571,7 @@ do_X509_sign(BIO * err, X509 * x, EVP_PKEY * pkey, const EVP_MD * md,
 }
 
 
-int 
+int
 do_X509_REQ_sign(BIO * err, X509_REQ * x, EVP_PKEY * pkey, const EVP_MD * md,
     STACK_OF(OPENSSL_STRING) * sigopts)
 {
@@ -1592,7 +1587,7 @@ do_X509_REQ_sign(BIO * err, X509_REQ * x, EVP_PKEY * pkey, const EVP_MD * md,
 
 
 
-int 
+int
 do_X509_CRL_sign(BIO * err, X509_CRL * x, EVP_PKEY * pkey, const EVP_MD * md,
     STACK_OF(OPENSSL_STRING) * sigopts)
 {

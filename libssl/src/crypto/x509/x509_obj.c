@@ -1,4 +1,4 @@
-/* crypto/x509/x509_obj.c */
+/* $OpenBSD: x509_obj.c,v 1.16 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,13 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 #include <openssl/lhash.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
-#include <openssl/buffer.h>
 
 char *
 X509_NAME_oneline(X509_NAME *a, char *buf, int len)
@@ -142,7 +144,7 @@ X509_NAME_oneline(X509_NAME *a, char *buf, int len)
 		} else
 			p = &(buf[lold]);
 		*(p++) = '/';
-		memcpy(p, s, (unsigned int)l1);
+		memcpy(p, s, l1);
 		p += l1;
 		*(p++) = '=';
 		q = ne->value->data;

@@ -1,4 +1,4 @@
-/* crypto/err/err.h */
+/* $OpenBSD: err.h,v 1.21 2014/07/11 09:25:24 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -112,12 +112,10 @@
 #ifndef HEADER_ERR_H
 #define HEADER_ERR_H
 
-#include <openssl/e_os2.h>
+#include <openssl/opensslconf.h>
 
-#ifndef OPENSSL_NO_FP_API
 #include <stdio.h>
 #include <stdlib.h>
-#endif
 
 #include <openssl/ossl_typ.h>
 #ifndef OPENSSL_NO_BIO
@@ -234,10 +232,8 @@ typedef struct err_state_st {
 #define HMACerr(f,r) ERR_PUT_error(ERR_LIB_HMAC,(f),(r),__FILE__,__LINE__)
 #define JPAKEerr(f,r) ERR_PUT_error(ERR_LIB_JPAKE,(f),(r),__FILE__,__LINE__)
 
-/* Borland C seems too stupid to be able to shift and do longs in
- * the pre-processor :-( */
-#define ERR_PACK(l,f,r)		(((((unsigned long)l)&0xffL)*0x1000000)| \
-				((((unsigned long)f)&0xfffL)*0x1000)| \
+#define ERR_PACK(l,f,r)		(((((unsigned long)l)&0xffL)<<24L)| \
+				((((unsigned long)f)&0xfffL)<<12L)| \
 				((((unsigned long)r)&0xfffL)))
 #define ERR_GET_LIB(l)		(int)((((unsigned long)l)>>24L)&0xffL)
 #define ERR_GET_FUNC(l)		(int)((((unsigned long)l)>>12L)&0xfffL)
@@ -337,9 +333,7 @@ const char *ERR_func_error_string(unsigned long e);
 const char *ERR_reason_error_string(unsigned long e);
 void ERR_print_errors_cb(int (*cb)(const char *str, size_t len, void *u),
     void *u);
-#ifndef OPENSSL_NO_FP_API
 void ERR_print_errors_fp(FILE *fp);
-#endif
 #ifndef OPENSSL_NO_BIO
 void ERR_print_errors(BIO *bp);
 #endif

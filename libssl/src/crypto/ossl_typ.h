@@ -1,3 +1,4 @@
+/* $OpenBSD: ossl_typ.h,v 1.12 2014/06/12 15:49:27 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
  *
@@ -55,7 +56,7 @@
 #ifndef HEADER_OPENSSL_TYPES_H
 #define HEADER_OPENSSL_TYPES_H
 
-#include <openssl/e_os2.h>
+#include <openssl/opensslconf.h>
 
 #ifdef NO_ASN1_TYPEDEFS
 #define ASN1_INTEGER		ASN1_STRING

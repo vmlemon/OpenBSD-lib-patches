@@ -1,4 +1,4 @@
-/* apps/ts.c */
+/* $OpenBSD: ts.c,v 1.18 2014/07/12 17:54:31 jsing Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2002.
  */
@@ -59,14 +59,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
+#include <openssl/bn.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/ts.h>
-#include <openssl/bn.h>
-
 
 /* Length of the nonce of the request in bits (must be a multiple of 8). */
 #define	NONCE_LENGTH		64
@@ -132,7 +133,6 @@ ts_main(int argc, char **argv)
 	char *data = NULL;
 	char *digest = NULL;
 	const EVP_MD *md = NULL;
-	char *rnd = NULL;
 	char *policy = NULL;
 	int no_nonce = 0;
 	int cert = 0;
@@ -153,17 +153,8 @@ ts_main(int argc, char **argv)
 	int token_in = 0;
 	/* Output is ContentInfo instead of TimeStampResp. */
 	int token_out = 0;
-	int free_bio_err = 0;
 
 	ERR_load_crypto_strings();
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL && (bio_err = BIO_new(BIO_s_file())) != NULL) {
-		free_bio_err = 1;
-		BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-	}
-	if (!load_config(bio_err, NULL))
-		goto cleanup;
 
 	for (argc--, argv++; argc > 0; argc--, argv++) {
 		if (strcmp(*argv, "-config") == 0) {
@@ -186,10 +177,6 @@ ts_main(int argc, char **argv)
 			if (argc-- < 1)
 				goto usage;
 			digest = *++argv;
-		} else if (strcmp(*argv, "-rand") == 0) {
-			if (argc-- < 1)
-				goto usage;
-			rnd = *++argv;
 		} else if (strcmp(*argv, "-policy") == 0) {
 			if (argc-- < 1)
 				goto usage;
@@ -320,7 +307,7 @@ ts_main(int argc, char **argv)
 
 usage:
 	BIO_printf(bio_err, "usage:\n"
-	    "ts -query [-rand file:file:...] [-config configfile] "
+	    "ts -query [-config configfile] "
 	    "[-data file_to_hash] [-digest digest_bytes]"
 	    "[-md2|-md4|-md5|-sha|-sha1|-mdc2|-ripemd160] "
 	    "[-policy object_id] [-no_nonce] [-cert] "
@@ -338,15 +325,13 @@ usage:
 	    "-in response.tsr [-token_in] "
 	    "-CApath ca_path -CAfile ca_file.pem "
 	    "-untrusted cert_file.pem\n");
+
 cleanup:
 	/* Clean up. */
 	NCONF_free(conf);
 	free(password);
 	OBJ_cleanup();
-	if (free_bio_err) {
-		BIO_free_all(bio_err);
-		bio_err = NULL;
-	}
+
 	return (ret);
 }
 
@@ -553,6 +538,7 @@ err:
 	free(data);
 	ASN1_OBJECT_free(policy_obj);
 	ASN1_INTEGER_free(nonce_asn1);
+
 	return ts_req;
 }
 

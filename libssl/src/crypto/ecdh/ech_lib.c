@@ -1,4 +1,4 @@
-/* crypto/ecdh/ech_lib.c */
+/* $OpenBSD: ech_lib.c,v 1.7 2014/07/10 22:45:57 jsing Exp $ */
 /* ====================================================================
  * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
  *
@@ -67,14 +67,15 @@
  *
  */
 
-#include "ech_locl.h"
 #include <string.h>
+
+#include <openssl/opensslconf.h>
+
+#include "ech_locl.h"
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
 #include <openssl/err.h>
-
-const char ECDH_version[]="ECDH" OPENSSL_VERSION_PTEXT;
 
 static const ECDH_METHOD *default_ECDH_method = NULL;
 
@@ -129,7 +130,7 @@ static ECDH_DATA *ECDH_DATA_new_method(ENGINE *engine)
 	{
 	ECDH_DATA *ret;
 
-	ret=(ECDH_DATA *)malloc(sizeof(ECDH_DATA));
+	ret = malloc(sizeof(ECDH_DATA));
 	if (ret == NULL)
 		{
 		ECDHerr(ECDH_F_ECDH_DATA_NEW_METHOD, ERR_R_MALLOC_FAILURE);

@@ -1,4 +1,4 @@
-/* crypto/aes/aes.h -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: aes.h,v 1.14 2014/07/09 09:10:07 miod Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
  *
@@ -86,11 +86,6 @@ int AES_set_encrypt_key(const unsigned char *userKey, const int bits,
 int AES_set_decrypt_key(const unsigned char *userKey, const int bits,
     AES_KEY *key);
 
-int private_AES_set_encrypt_key(const unsigned char *userKey, const int bits,
-    AES_KEY *key);
-int private_AES_set_decrypt_key(const unsigned char *userKey, const int bits,
-    AES_KEY *key);
-
 void AES_encrypt(const unsigned char *in, unsigned char *out,
     const AES_KEY *key);
 void AES_decrypt(const unsigned char *in, unsigned char *out,
@@ -117,10 +112,6 @@ void AES_ctr128_encrypt(const unsigned char *in, unsigned char *out,
 /* NB: the IV is _two_ blocks long */
 void AES_ige_encrypt(const unsigned char *in, unsigned char *out,
     size_t length, const AES_KEY *key, unsigned char *ivec, const int enc);
-/* NB: the IV is _four_ blocks long */
-void AES_bi_ige_encrypt(const unsigned char *in, unsigned char *out,
-    size_t length, const AES_KEY *key, const AES_KEY *key2,
-    const unsigned char *ivec, const int enc);
 
 int AES_wrap_key(AES_KEY *key, const unsigned char *iv, unsigned char *out,
     const unsigned char *in, unsigned int inlen);

@@ -1,4 +1,4 @@
-/* crypto/bio/bf_nbio.c */
+/* $OpenBSD: bf_nbio.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,11 +56,11 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <errno.h>
-#include "cryptlib.h"
-#include <openssl/rand.h>
+#include <stdio.h>
+
 #include <openssl/bio.h>
+#include <openssl/rand.h>
 
 /* BIO_put and BIO_get both add to the digest,
  * BIO_gets returns the digest */
@@ -119,8 +119,7 @@ nbiof_free(BIO *a)
 {
 	if (a == NULL)
 		return (0);
-	if (a->ptr != NULL)
-		free(a->ptr);
+	free(a->ptr);
 	a->ptr = NULL;
 	a->init = 0;
 	a->flags = 0;

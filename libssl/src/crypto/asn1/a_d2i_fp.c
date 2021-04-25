@@ -1,4 +1,4 @@
-/* crypto/asn1/a_d2i_fp.c */
+/* $OpenBSD: a_d2i_fp.c,v 1.11 2014/07/13 11:10:20 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,16 +56,16 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <limits.h>
-#include "cryptlib.h"
+#include <stdio.h>
+
+#include <openssl/asn1.h>
 #include <openssl/buffer.h>
-#include <openssl/asn1_mac.h>
+#include <openssl/err.h>
 
 static int asn1_d2i_read_bio(BIO *in, BUF_MEM **pb);
 
 #ifndef NO_OLD_ASN1
-#ifndef OPENSSL_NO_FP_API
 
 void *
 ASN1_d2i_fp(void *(*xnew)(void), d2i_of_void *d2i, FILE *in, void **x)
@@ -82,7 +82,6 @@ ASN1_d2i_fp(void *(*xnew)(void), d2i_of_void *d2i, FILE *in, void **x)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 void *
 ASN1_d2i_bio(void *(*xnew)(void), d2i_of_void *d2i, BIO *in, void **x)
@@ -128,7 +127,6 @@ err:
 	return (ret);
 }
 
-#ifndef OPENSSL_NO_FP_API
 void *
 ASN1_item_d2i_fp(const ASN1_ITEM *it, FILE *in, void *x)
 {
@@ -144,7 +142,6 @@ ASN1_item_d2i_fp(const ASN1_ITEM *it, FILE *in, void *x)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 #define HEADER_SIZE   8
 static int

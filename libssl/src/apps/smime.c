@@ -1,4 +1,4 @@
-/* smime.c */
+/* $OpenBSD: smime.c,v 1.28 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project.
  */
@@ -60,10 +60,12 @@
 
 #include <stdio.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/crypto.h>
-#include <openssl/pem.h>
 #include <openssl/err.h>
+#include <openssl/pem.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
@@ -82,7 +84,7 @@ static int smime_cb(int ok, X509_STORE_CTX * ctx);
 
 int smime_main(int, char **);
 
-int 
+int
 smime_main(int argc, char **argv)
 {
 	ENGINE *e = NULL;
@@ -106,7 +108,6 @@ smime_main(int argc, char **argv)
 	char *to = NULL, *from = NULL, *subject = NULL;
 	char *CAfile = NULL, *CApath = NULL;
 	char *passargin = NULL, *passin = NULL;
-	char *inrand = NULL;
 	int indef = 0;
 	const EVP_MD *sign_md = NULL;
 	int informat = FORMAT_SMIME, outformat = FORMAT_SMIME;
@@ -119,15 +120,6 @@ smime_main(int argc, char **argv)
 
 	args = argv + 1;
 	ret = 1;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL) {
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-	}
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	while (!badarg && *args && *args[0] == '-') {
 		if (!strcmp(*args, "-encrypt"))
@@ -147,10 +139,6 @@ smime_main(int argc, char **argv)
 			cipher = EVP_des_ede3_cbc();
 		else if (!strcmp(*args, "-des"))
 			cipher = EVP_des_cbc();
-#endif
-#ifndef OPENSSL_NO_SEED
-		else if (!strcmp(*args, "-seed"))
-			cipher = EVP_seed_cbc();
 #endif
 #ifndef OPENSSL_NO_RC2
 		else if (!strcmp(*args, "-rc2-40"))
@@ -206,12 +194,6 @@ smime_main(int argc, char **argv)
 			flags |= PKCS7_NOOLDMIMETYPE;
 		else if (!strcmp(*args, "-crlfeol"))
 			flags |= PKCS7_CRLFEOL;
-		else if (!strcmp(*args, "-rand")) {
-			if (!args[1])
-				goto argerr;
-			args++;
-			inrand = *args;
-		}
 #ifndef OPENSSL_NO_ENGINE
 		else if (!strcmp(*args, "-engine")) {
 			if (!args[1])
@@ -378,9 +360,6 @@ argerr:
 		BIO_printf(bio_err, "-des3          encrypt with triple DES\n");
 		BIO_printf(bio_err, "-des           encrypt with DES\n");
 #endif
-#ifndef OPENSSL_NO_SEED
-		BIO_printf(bio_err, "-seed          encrypt with SEED\n");
-#endif
 #ifndef OPENSSL_NO_RC2
 		BIO_printf(bio_err, "-rc2-40        encrypt with RC2-40 (default)\n");
 		BIO_printf(bio_err, "-rc2-64        encrypt with RC2-64\n");
@@ -423,9 +402,6 @@ argerr:
 		BIO_printf(bio_err, "-engine e      use engine e, possibly a hardware device.\n");
 #endif
 		BIO_printf(bio_err, "-passin arg    input file pass phrase source\n");
-		BIO_printf(bio_err, "-rand file:file:...\n");
-		BIO_printf(bio_err, "               load the file (or the files in the directory) into\n");
-		BIO_printf(bio_err, "               the random number generator\n");
 		BIO_printf(bio_err, "cert.pem       recipient certificate(s) for encryption\n");
 		goto end;
 	}
@@ -679,12 +655,12 @@ end:
 	BIO_free(in);
 	BIO_free(indata);
 	BIO_free_all(out);
-	if (passin)
-		free(passin);
+	free(passin);
+
 	return (ret);
 }
 
-static int 
+static int
 save_certs(char *signerfile, STACK_OF(X509) * signers)
 {
 	int i;
@@ -703,7 +679,7 @@ save_certs(char *signerfile, STACK_OF(X509) * signers)
 
 /* Minimal callback just to output policy info (if any) */
 
-static int 
+static int
 smime_cb(int ok, X509_STORE_CTX * ctx)
 {
 	int error;

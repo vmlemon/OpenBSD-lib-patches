@@ -1,4 +1,4 @@
-# $OpenBSD: Makefile,v 1.28 2014/04/27 16:19:04 jsing Exp $
+# $OpenBSD: Makefile,v 1.45 2014/07/12 20:11:45 miod Exp $
 
 LIB=	crypto
 
@@ -9,13 +9,14 @@ CFLAGS+= -Wall -Werror
 
 .include <bsd.own.mk>		# for 'NOPIC' definition
 .if !defined(NOPIC)
-CFLAGS+= -DDSO_DLFCN -DHAVE_DLFCN_H
+CFLAGS+= -DDSO_DLFCN -DHAVE_DLFCN_H -DHAVE_FUNOPEN
 .endif
 
 .if ${MACHINE_ARCH} == "sparc"
 PICFLAG=-fPIC
 .endif
 
+CFLAGS+= -DLIBRESSL_INTERNAL
 CFLAGS+= -DTERMIOS
 # Hardware engines
 CFLAGS+= -DOPENSSL_NO_HW_PADLOCK # XXX enable this?
@@ -76,6 +77,9 @@ SRCS+= buffer.c buf_err.c buf_str.c
 # cast/
 SRCS+= c_skey.c c_ecb.c c_enc.c c_cfb64.c c_ofb64.c
 
+# chacha/
+SRCS+= chacha.c
+
 # cmac/
 SRCS+= cmac.c cm_ameth.c cm_pmeth.c
 
@@ -95,7 +99,7 @@ SRCS+= conf_mall.c conf_sap.c
 SRCS+= cbc_cksm.c cbc_enc.c cfb64enc.c cfb_enc.c 
 SRCS+= ecb3_enc.c ecb_enc.c  enc_read.c enc_writ.c
 SRCS+= fcrypt.c ofb64enc.c ofb_enc.c  pcbc_enc.c
-SRCS+= qud_cksm.c rand_key.c rpc_enc.c  set_key.c xcbc_enc.c
+SRCS+= qud_cksm.c rand_key.c set_key.c xcbc_enc.c
 SRCS+= str2key.c  cfb64ede.c ofb64ede.c ede_cbcm_enc.c
 
 # dh/
@@ -128,8 +132,8 @@ SRCS+= eng_err.c eng_lib.c eng_list.c eng_init.c eng_ctrl.c
 SRCS+= eng_table.c eng_pkey.c eng_fat.c eng_all.c
 SRCS+= tb_rsa.c tb_dsa.c tb_ecdsa.c tb_dh.c tb_ecdh.c tb_rand.c tb_store.c
 SRCS+= tb_cipher.c tb_digest.c tb_pkmeth.c tb_asnmth.c
-SRCS+= eng_openssl.c eng_cnf.c eng_dyn.c hw_cryptodev.c
-SRCS+= eng_rsax.c eng_rdrand.c
+SRCS+= eng_openssl.c eng_cnf.c eng_dyn.c
+SRCS+= eng_rsax.c
 # XXX unnecessary? handled in EVP now...
 # SRCS+= eng_aesni.c # local addition
 
@@ -137,7 +141,7 @@ SRCS+= eng_rsax.c eng_rdrand.c
 SRCS+= err.c err_all.c err_prn.c
 
 # evp/
-SRCS+= encode.c digest.c evp_enc.c evp_key.c evp_acnf.c
+SRCS+= encode.c digest.c evp_enc.c evp_key.c
 SRCS+= e_des.c e_bf.c e_idea.c e_des3.c e_camellia.c
 SRCS+= e_rc4.c e_aes.c names.c
 SRCS+= e_xcbc_d.c e_rc2.c e_cast.c e_rc5.c
@@ -145,10 +149,11 @@ SRCS+= m_null.c m_md4.c m_md5.c m_sha.c m_sha1.c m_wp.c
 SRCS+= m_dss.c m_dss1.c m_mdc2.c m_ripemd.c m_ecdsa.c
 SRCS+= p_open.c p_seal.c p_sign.c p_verify.c p_lib.c p_enc.c p_dec.c
 SRCS+= bio_md.c bio_b64.c bio_enc.c evp_err.c e_null.c
-SRCS+= c_all.c c_allc.c c_alld.c evp_lib.c bio_ok.c
+SRCS+= c_all.c c_allc.c c_alld.c evp_lib.c
 SRCS+= evp_pkey.c evp_pbe.c p5_crpt.c p5_crpt2.c
 SRCS+= e_old.c pmeth_lib.c pmeth_fn.c pmeth_gn.c m_sigver.c
 SRCS+= e_aes_cbc_hmac_sha1.c e_rc4_hmac_md5.c
+SRCS+= e_chacha.c evp_aead.c e_chacha20poly1305.c
 
 # hmac/
 SRCS+= hmac.c hm_ameth.c hm_pmeth.c
@@ -194,17 +199,14 @@ SRCS+= p12_utl.c p12_npas.c pk12err.c p12_p8d.c p12_p8e.c
 SRCS+= pk7_asn1.c pk7_lib.c pkcs7err.c pk7_doit.c pk7_smime.c pk7_attr.c
 SRCS+= pk7_mime.c bio_pk7.c
 
-# pqueue/
-SRCS+= pqueue.c
+# poly1305/
+SRCS+= poly1305.c
 
 # rand/
 SRCS+= randfile.c rand_lib.c rand_err.c
 
 # rc2/
 SRCS+= rc2_ecb.c rc2_skey.c rc2_cbc.c rc2cfb64.c rc2ofb64.c
-
-# rc4/
-SRCS+= rc4_utl.c
 
 # rc5/
 #SRCS+= rc5_skey.c rc5_ecb.c rc5cfb64.c rc5ofb64.c
@@ -214,7 +216,7 @@ SRCS+= rmd_dgst.c rmd_one.c
 
 # rsa/
 SRCS+= rsa_eay.c rsa_gen.c rsa_lib.c rsa_sign.c rsa_saos.c rsa_err.c
-SRCS+= rsa_pk1.c rsa_ssl.c rsa_none.c rsa_oaep.c rsa_chk.c rsa_null.c
+SRCS+= rsa_pk1.c rsa_ssl.c rsa_none.c rsa_oaep.c rsa_chk.c
 SRCS+= rsa_pss.c rsa_x931.c rsa_asn1.c rsa_depr.c rsa_ameth.c rsa_prn.c
 SRCS+= rsa_pmeth.c rsa_crpt.c
 
@@ -271,6 +273,7 @@ SRCS+= v3_asid.c v3_addr.c
 	${LCRYPTO_SRC}/buffer \
 	${LCRYPTO_SRC}/camellia \
 	${LCRYPTO_SRC}/cast \
+	${LCRYPTO_SRC}/chacha \
 	${LCRYPTO_SRC}/cmac \
 	${LCRYPTO_SRC}/cms \
 	${LCRYPTO_SRC}/comp \
@@ -299,7 +302,7 @@ SRCS+= v3_asid.c v3_addr.c
 	${LCRYPTO_SRC}/perlasm \
 	${LCRYPTO_SRC}/pkcs12 \
 	${LCRYPTO_SRC}/pkcs7 \
-	${LCRYPTO_SRC}/pqueue \
+	${LCRYPTO_SRC}/poly1305 \
 	${LCRYPTO_SRC}/rand \
 	${LCRYPTO_SRC}/rc2 \
 	${LCRYPTO_SRC}/rc4 \
@@ -329,6 +332,7 @@ HDRS=\
 	crypto/buffer/buffer.h \
 	crypto/camellia/camellia.h \
 	crypto/cast/cast.h \
+	crypto/chacha/chacha.h \
 	crypto/cmac/cmac.h \
 	crypto/cms/cms.h \
 	crypto/comp/comp.h \
@@ -355,13 +359,14 @@ HDRS=\
 	crypto/modes/modes.h \
 	crypto/objects/objects.h \
 	crypto/ocsp/ocsp.h \
+	crypto/opensslfeatures.h \
 	crypto/opensslv.h \
 	crypto/ossl_typ.h \
 	crypto/pem/pem.h \
 	crypto/pem/pem2.h \
 	crypto/pkcs12/pkcs12.h \
 	crypto/pkcs7/pkcs7.h \
-	crypto/pqueue/pqueue.h \
+	crypto/poly1305/poly1305.h \
 	crypto/rand/rand.h \
 	crypto/rc2/rc2.h \
 	crypto/rc4/rc4.h \
@@ -421,9 +426,7 @@ obj_dat.h: obj_mac.h
 
 .if exists (${.CURDIR}/arch/${MACHINE_CPU}/Makefile.inc)
 .include "${.CURDIR}/arch/${MACHINE_CPU}/Makefile.inc"
-.endif
-
-.if !defined(SSLASM)
+.else
 CFLAGS+=-DOPENSSL_NO_ASM
 SRCS+= aes_core.c aes_cbc.c 
 SRCS+= bf_enc.c

@@ -28,16 +28,16 @@ DES_fcrypt, DES_crypt, DES_enc_read, DES_enc_write - DES encryption
  void DES_set_odd_parity(DES_cblock *key);
  int DES_is_weak_key(const_DES_cblock *key);
 
- void DES_ecb_encrypt(const_DES_cblock *input, DES_cblock *output, 
+ void DES_ecb_encrypt(const_DES_cblock *input, DES_cblock *output,
         DES_key_schedule *ks, int enc);
- void DES_ecb2_encrypt(const_DES_cblock *input, DES_cblock *output, 
+ void DES_ecb2_encrypt(const_DES_cblock *input, DES_cblock *output,
         DES_key_schedule *ks1, DES_key_schedule *ks2, int enc);
- void DES_ecb3_encrypt(const_DES_cblock *input, DES_cblock *output, 
-        DES_key_schedule *ks1, DES_key_schedule *ks2, 
+ void DES_ecb3_encrypt(const_DES_cblock *input, DES_cblock *output,
+        DES_key_schedule *ks1, DES_key_schedule *ks2,
         DES_key_schedule *ks3, int enc);
 
- void DES_ncbc_encrypt(const unsigned char *input, unsigned char *output, 
-        long length, DES_key_schedule *schedule, DES_cblock *ivec, 
+ void DES_ncbc_encrypt(const unsigned char *input, unsigned char *output,
+        long length, DES_key_schedule *schedule, DES_cblock *ivec,
         int enc);
  void DES_cfb_encrypt(const unsigned char *in, unsigned char *out,
         int numbits, long length, DES_key_schedule *schedule,
@@ -45,8 +45,8 @@ DES_fcrypt, DES_crypt, DES_enc_read, DES_enc_write - DES encryption
  void DES_ofb_encrypt(const unsigned char *in, unsigned char *out,
         int numbits, long length, DES_key_schedule *schedule,
         DES_cblock *ivec);
- void DES_pcbc_encrypt(const unsigned char *input, unsigned char *output, 
-        long length, DES_key_schedule *schedule, DES_cblock *ivec, 
+ void DES_pcbc_encrypt(const unsigned char *input, unsigned char *output,
+        long length, DES_key_schedule *schedule, DES_cblock *ivec,
         int enc);
  void DES_cfb64_encrypt(const unsigned char *in, unsigned char *out,
         long length, DES_key_schedule *schedule, DES_cblock *ivec,
@@ -55,8 +55,8 @@ DES_fcrypt, DES_crypt, DES_enc_read, DES_enc_write - DES encryption
         long length, DES_key_schedule *schedule, DES_cblock *ivec,
         int *num);
 
- void DES_xcbc_encrypt(const unsigned char *input, unsigned char *output, 
-        long length, DES_key_schedule *schedule, DES_cblock *ivec, 
+ void DES_xcbc_encrypt(const unsigned char *input, unsigned char *output,
+        long length, DES_key_schedule *schedule, DES_cblock *ivec,
         const_DES_cblock *inw, const_DES_cblock *outw, int enc);
 
  void DES_ede2_cbc_encrypt(const unsigned char *input,
@@ -73,22 +73,22 @@ DES_fcrypt, DES_crypt, DES_enc_read, DES_enc_write - DES encryption
         unsigned char *output, long length, DES_key_schedule *ks1,
         DES_key_schedule *ks2, DES_key_schedule *ks3, DES_cblock *ivec,
         int enc);
- void DES_ede3_cbcm_encrypt(const unsigned char *in, unsigned char *out, 
-        long length, DES_key_schedule *ks1, DES_key_schedule *ks2, 
-        DES_key_schedule *ks3, DES_cblock *ivec1, DES_cblock *ivec2, 
+ void DES_ede3_cbcm_encrypt(const unsigned char *in, unsigned char *out,
+        long length, DES_key_schedule *ks1, DES_key_schedule *ks2,
+        DES_key_schedule *ks3, DES_cblock *ivec1, DES_cblock *ivec2,
         int enc);
- void DES_ede3_cfb64_encrypt(const unsigned char *in, unsigned char *out, 
+ void DES_ede3_cfb64_encrypt(const unsigned char *in, unsigned char *out,
         long length, DES_key_schedule *ks1, DES_key_schedule *ks2,
         DES_key_schedule *ks3, DES_cblock *ivec, int *num, int enc);
- void DES_ede3_ofb64_encrypt(const unsigned char *in, unsigned char *out, 
-        long length, DES_key_schedule *ks1, 
-        DES_key_schedule *ks2, DES_key_schedule *ks3, 
+ void DES_ede3_ofb64_encrypt(const unsigned char *in, unsigned char *out,
+        long length, DES_key_schedule *ks1,
+        DES_key_schedule *ks2, DES_key_schedule *ks3,
         DES_cblock *ivec, int *num);
 
- DES_LONG DES_cbc_cksum(const unsigned char *input, DES_cblock *output, 
-        long length, DES_key_schedule *schedule, 
+ DES_LONG DES_cbc_cksum(const unsigned char *input, DES_cblock *output,
+        long length, DES_key_schedule *schedule,
         const_DES_cblock *ivec);
- DES_LONG DES_quad_cksum(const unsigned char *input, DES_cblock output[], 
+ DES_LONG DES_quad_cksum(const unsigned char *input, DES_cblock output[],
         long length, int out_count, DES_cblock *seed);
  void DES_string_to_key(const char *str, DES_cblock *key);
  void DES_string_to_2keys(const char *str, DES_cblock *key1,
@@ -114,9 +114,7 @@ consists of 8 bytes with odd parity.  The least significant bit in
 each byte is the parity bit.  The key schedule is an expanded form of
 the key; it is used to speed the encryption process.
 
-DES_random_key() generates a random key.  The PRNG must be seeded
-prior to using this function (see L<rand(3)|rand(3)>).  If the PRNG
-could not generate a secure key, 0 is returned.
+DES_random_key() generates a random key in odd parity.
 
 Before a DES key can be used, it must be converted into the
 architecture dependent I<DES_key_schedule> via the
@@ -136,8 +134,7 @@ depend on a global variable.
 DES_set_odd_parity() sets the parity of the passed I<key> to odd.
 
 DES_is_weak_key() returns 1 is the passed key is a weak key, 0 if it
-is ok.  The probability that a randomly generated key is weak is
-1/2^52, so it is not really worth checking for them.
+is ok.
 
 The following routines mostly operate on an input and output stream of
 I<DES_cblock>s.
@@ -283,13 +280,11 @@ DES_cbc_encrypt is used.
 =head1 NOTES
 
 Single-key DES is insecure due to its short key size.  ECB mode is
-not suitable for most applications; see L<des_modes(7)|des_modes(7)>.
+not suitable for most applications.
 
 The L<evp(3)|evp(3)> library provides higher-level encryption functions.
 
 =head1 BUGS
-
-DES_3cbc_encrypt() is flawed and must not be used in applications.
 
 DES_cbc_encrypt() does not modify B<ivec>; use DES_ncbc_encrypt()
 instead.
@@ -312,33 +307,19 @@ The same applies for DES_string_to_2key().
 
 ANSI X3.106
 
-The B<des> library was written to be source code compatible with
+The B<des> library was initially written to be source code compatible with
 the MIT Kerberos library.
 
 =head1 SEE ALSO
 
-crypt(3), L<des_modes(7)|des_modes(7)>, L<evp(3)|evp(3)>, L<rand(3)|rand(3)>
+crypt(3), L<evp(3)|evp(3)>, L<rand(3)|rand(3)>
 
 =head1 HISTORY
 
 In OpenSSL 0.9.7, all des_ functions were renamed to DES_ to avoid
-clashes with older versions of libdes.  Compatibility des_ functions
-are provided for a short while, as well as crypt().
-Declarations for these are in <openssl/des_old.h>. There is no DES_
-variant for des_random_seed().
-This will happen to other functions
-as well if they are deemed redundant (des_random_seed() just calls
-RAND_seed() and is present for backward compatibility only), buggy or
-already scheduled for removal.
+clashes with older versions of libdes.
 
-des_cbc_cksum(), des_cbc_encrypt(), des_ecb_encrypt(),
-des_is_weak_key(), des_key_sched(), des_pcbc_encrypt(),
-des_quad_cksum(), des_random_key() and des_string_to_key()
-are available in the MIT Kerberos library;
-des_check_key_parity(), des_fixup_key_parity() and des_is_weak_key()
-are available in newer versions of that library.
-
-des_set_key_checked() and des_set_key_unchecked() were added in
+DES_set_key_checked() and DES_set_key_unchecked() were added in
 OpenSSL 0.9.5.
 
 des_generate_random_block(), des_init_random_number_generator(),
@@ -346,7 +327,7 @@ des_new_random_key(), des_set_random_generator_seed() and
 des_set_sequence_number() and des_rand_data() are used in newer
 versions of Kerberos but are not implemented here.
 
-des_random_key() generated cryptographically weak random data in
+DES_random_key() generated cryptographically weak random data in
 SSLeay and in OpenSSL prior version 0.9.5, as well as in the original
 MIT library.
 

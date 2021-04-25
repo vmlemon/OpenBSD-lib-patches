@@ -1,4 +1,4 @@
-/* crypto/buffer/buffer.c */
+/* $OpenBSD: buffer.c,v 1.21 2014/07/11 08:44:48 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,8 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <stdlib.h>
+#include <string.h>
+
 #include <openssl/buffer.h>
+#include <openssl/err.h>
 
 /* LIMIT_BEFORE_EXPANSION is the maximum n such that (n+3)/3*4 < 2**31. That
  * function is applied in several functions in this file and this limit ensures
@@ -88,7 +91,7 @@ BUF_MEM_free(BUF_MEM *a)
 		return;
 
 	if (a->data != NULL) {
-		memset(a->data, 0, (unsigned int)a->max);
+		explicit_bzero(a->data, a->max);
 		free(a->data);
 	}
 	free(a);
@@ -115,10 +118,7 @@ BUF_MEM_grow(BUF_MEM *str, size_t len)
 		return 0;
 	}
 	n = (len + 3) / 3 * 4;
-	if (str->data == NULL)
-		ret = malloc(n);
-	else
-		ret = realloc(str->data, n);
+	ret = realloc(str->data, n);
 	if (ret == NULL) {
 		BUFerr(BUF_F_BUF_MEM_GROW, ERR_R_MALLOC_FAILURE);
 		len = 0;

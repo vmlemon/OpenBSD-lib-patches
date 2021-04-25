@@ -1,4 +1,4 @@
-/* v3_bitst.c */
+/* $OpenBSD: v3_bitst.c,v 1.10 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -57,8 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/conf.h>
+#include <openssl/err.h>
 #include <openssl/x509v3.h>
 
 static BIT_STRING_BITNAME ns_cert_type_table[] = {

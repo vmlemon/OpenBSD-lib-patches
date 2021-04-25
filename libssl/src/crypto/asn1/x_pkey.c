@@ -1,4 +1,4 @@
-/* crypto/asn1/x_pkey.c */
+/* $OpenBSD: x_pkey.c,v 1.15 2014/07/12 16:03:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,10 +57,12 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/asn1_mac.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
-#include <openssl/asn1_mac.h>
 #include <openssl/x509.h>
 
 /* need to implement */
@@ -107,12 +109,22 @@ X509_PKEY *
 X509_PKEY_new(void)
 {
 	X509_PKEY *ret = NULL;
-	ASN1_CTX c;
 
-	M_ASN1_New_Malloc(ret, X509_PKEY);
+	if ((ret = malloc(sizeof(X509_PKEY))) == NULL) {
+		ASN1_MAC_H_err(ASN1_F_X509_PKEY_NEW, ERR_R_MALLOC_FAILURE,
+		    __LINE__);
+		return NULL;
+	}
 	ret->version = 0;
-	M_ASN1_New(ret->enc_algor, X509_ALGOR_new);
-	M_ASN1_New(ret->enc_pkey, M_ASN1_OCTET_STRING_new);
+	if ((ret->enc_algor = X509_ALGOR_new()) == NULL) {
+		free(ret);
+		return NULL;
+	}
+	if ((ret->enc_pkey = M_ASN1_OCTET_STRING_new()) == NULL) {
+		X509_ALGOR_free(ret->enc_algor);
+		free(ret);
+		return NULL;
+	}
 	ret->dec_pkey = NULL;
 	ret->key_length = 0;
 	ret->key_data = NULL;
@@ -121,7 +133,6 @@ X509_PKEY_new(void)
 	memset(ret->cipher.iv, 0, EVP_MAX_IV_LENGTH);
 	ret->references = 1;
 	return (ret);
-	M_ASN1_New_Error(ASN1_F_X509_PKEY_NEW);
 }
 
 void
@@ -138,10 +149,8 @@ X509_PKEY_free(X509_PKEY *x)
 
 	if (x->enc_algor != NULL)
 		X509_ALGOR_free(x->enc_algor);
-	if (x->enc_pkey != NULL)
-		M_ASN1_OCTET_STRING_free(x->enc_pkey);
-	if (x->dec_pkey != NULL)
-		EVP_PKEY_free(x->dec_pkey);
+	M_ASN1_OCTET_STRING_free(x->enc_pkey);
+	EVP_PKEY_free(x->dec_pkey);
 	if ((x->key_data != NULL) && (x->key_free))
 		free(x->key_data);
 	free(x);

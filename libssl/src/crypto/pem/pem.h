@@ -1,4 +1,4 @@
-/* crypto/pem/pem.h */
+/* $OpenBSD: pem.h,v 1.16 2014/06/12 15:49:30 deraadt Exp $ */
 /* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,7 +59,8 @@
 #ifndef HEADER_PEM_H
 #define HEADER_PEM_H
 
-#include <openssl/e_os2.h>
+#include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_BIO
 #include <openssl/bio.h>
 #endif
@@ -205,15 +206,6 @@ typedef struct pem_ctx_st {
  * IMPLEMENT_PEM_rw(...) or IMPLEMENT_PEM_rw_cb(...)
  */
 
-#ifdef OPENSSL_NO_FP_API
-
-#define IMPLEMENT_PEM_read_fp(name, type, str, asn1) /**/
-#define IMPLEMENT_PEM_write_fp(name, type, str, asn1) /**/
-#define IMPLEMENT_PEM_write_fp_const(name, type, str, asn1) /**/
-#define IMPLEMENT_PEM_write_cb_fp(name, type, str, asn1) /**/
-#define IMPLEMENT_PEM_write_cb_fp_const(name, type, str, asn1) /**/
-
-#else
 
 #define IMPLEMENT_PEM_read_fp(name, type, str, asn1) \
 type *PEM_read_##name(FILE *fp, type **x, pem_password_cb *cb, void *u)\
@@ -249,7 +241,6 @@ int PEM_write_##name(FILE *fp, type *x, const EVP_CIPHER *enc, \
 	return PEM_ASN1_write((i2d_of_void *)i2d_##asn1,str,fp,x,enc,kstr,klen,cb,u); \
 	}
 
-#endif
 
 #define IMPLEMENT_PEM_read_bio(name, type, str, asn1) \
 type *PEM_read_bio_##name(BIO *bp, type **x, pem_password_cb *cb, void *u)\
@@ -317,13 +308,6 @@ int PEM_write_bio_##name(BIO *bp, type *x, const EVP_CIPHER *enc, \
 
 /* These are the same except they are for the declarations */
 
-#if defined(OPENSSL_NO_FP_API)
-
-#define DECLARE_PEM_read_fp(name, type) /**/
-#define DECLARE_PEM_write_fp(name, type) /**/
-#define DECLARE_PEM_write_cb_fp(name, type) /**/
-
-#else
 
 #define DECLARE_PEM_read_fp(name, type) \
 	type *PEM_read_##name(FILE *fp, type **x, pem_password_cb *cb, void *u);
@@ -338,7 +322,6 @@ int PEM_write_bio_##name(BIO *bp, type *x, const EVP_CIPHER *enc, \
 	int PEM_write_##name(FILE *fp, type *x, const EVP_CIPHER *enc, \
 	     unsigned char *kstr, int klen, pem_password_cb *cb, void *u);
 
-#endif
 
 #ifndef OPENSSL_NO_BIO
 #define DECLARE_PEM_read_bio(name, type) \
@@ -391,13 +374,7 @@ int PEM_write_bio_##name(BIO *bp, type *x, const EVP_CIPHER *enc, \
 	DECLARE_PEM_read(name, type) \
 	DECLARE_PEM_write_cb(name, type)
 
-#if 1
-/* "userdata": new with OpenSSL 0.9.4 */
 typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata);
-#else
-/* OpenSSL 0.9.3, 0.9.3a */
-typedef int pem_password_cb(char *buf, int size, int rwflag);
-#endif
 
 int	PEM_get_EVP_CIPHER_INFO(char *header, EVP_CIPHER_INFO *cipher);
 int	PEM_do_header (EVP_CIPHER_INFO *cipher, unsigned char *data, long *len,

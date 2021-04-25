@@ -1,4 +1,4 @@
-/* apps/errstr.c */
+/* $OpenBSD: errstr.c,v 1.19 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,12 +59,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "apps.h"
-#include <openssl/bio.h>
-#include <openssl/lhash.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
 
+#include "apps.h"
+
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/lhash.h>
+#include <openssl/ssl.h>
 
 int errstr_main(int, char **);
 
@@ -74,14 +75,6 @@ errstr_main(int argc, char **argv)
 	int i, ret = 0;
 	char buf[256];
 	unsigned long l;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	SSL_load_error_strings();
 
 	if ((argc > 1) && (strcmp(argv[1], "-stats") == 0)) {
 		BIO *out = NULL;
@@ -110,6 +103,6 @@ errstr_main(int argc, char **argv)
 			ret++;
 		}
 	}
-	
+
 	return (ret);
 }

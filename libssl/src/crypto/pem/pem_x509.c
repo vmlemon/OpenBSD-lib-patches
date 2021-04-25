@@ -1,4 +1,4 @@
-/* pem_x509.c */
+/* $OpenBSD: pem_x509.c,v 1.6 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2001.
  */
@@ -57,11 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/bio.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pkcs7.h>
 #include <openssl/pem.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509.h>
 
 IMPLEMENT_PEM_rw(X509, X509, PEM_STRING_X509, X509)

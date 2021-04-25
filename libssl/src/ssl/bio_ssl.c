@@ -1,4 +1,4 @@
-/* ssl/bio_ssl.c */
+/* $OpenBSD: bio_ssl.c,v 1.20 2014/06/12 15:49:31 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -83,15 +83,15 @@ typedef struct bio_ssl_st {
 } BIO_SSL;
 
 static BIO_METHOD methods_sslp = {
-	BIO_TYPE_SSL, "ssl",
-	ssl_write,
-	ssl_read,
-	ssl_puts,
-	NULL, /* ssl_gets, */
-	ssl_ctrl,
-	ssl_new,
-	ssl_free,
-	ssl_callback_ctrl,
+	.type = BIO_TYPE_SSL,
+	.name = "ssl",
+	.bwrite = ssl_write,
+	.bread = ssl_read,
+	.bputs = ssl_puts,
+	.ctrl = ssl_ctrl,
+	.create = ssl_new,
+	.destroy = ssl_free,
+	.callback_ctrl = ssl_callback_ctrl,
 };
 
 BIO_METHOD *
@@ -132,8 +132,7 @@ ssl_free(BIO *a)
 		a->init = 0;
 		a->flags = 0;
 	}
-	if (a->ptr != NULL)
-		free(a->ptr);
+	free(a->ptr);
 	return (1);
 }
 
@@ -153,18 +152,6 @@ ssl_read(BIO *b, char *out, int outl)
 
 	BIO_clear_retry_flags(b);
 
-#if 0
-	if (!SSL_is_init_finished(ssl)) {
-/*		ret=SSL_do_handshake(ssl); */
-		if (ret > 0) {
-
-			outflags = (BIO_FLAGS_READ|BIO_FLAGS_SHOULD_RETRY);
-			ret = -1;
-			goto end;
-		}
-	}
-#endif
-/*	if (ret > 0) */
 	ret = SSL_read(ssl, out, outl);
 
 	switch (SSL_get_error(ssl, ret)) {
@@ -449,12 +436,7 @@ ssl_ctrl(BIO *b, int cmd, long num, void *ptr)
 		break;
 	case BIO_CTRL_SET_CALLBACK:
 		{
-#if 0 /* FIXME: Should this be used?  -- Richard Levitte */
-			SSLerr(SSL_F_SSL_CTRL, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
-			ret = -1;
-#else
 			ret = 0;
-#endif
 		}
 		break;
 	case BIO_CTRL_GET_CALLBACK:
@@ -509,42 +491,38 @@ ssl_puts(BIO *bp, const char *str)
 BIO *
 BIO_new_buffer_ssl_connect(SSL_CTX *ctx)
 {
-#ifndef OPENSSL_NO_SOCK
 	BIO *ret = NULL, *buf = NULL, *ssl = NULL;
 
 	if ((buf = BIO_new(BIO_f_buffer())) == NULL)
-		return (NULL);
+		goto err;
 	if ((ssl = BIO_new_ssl_connect(ctx)) == NULL)
 		goto err;
 	if ((ret = BIO_push(buf, ssl)) == NULL)
 		goto err;
 	return (ret);
+
 err:
-	if (buf != NULL)
-		BIO_free(buf);
-	if (ssl != NULL)
-		BIO_free(ssl);
-#endif
+	BIO_free(buf);
+	BIO_free(ssl);
 	return (NULL);
 }
 
 BIO *
 BIO_new_ssl_connect(SSL_CTX *ctx)
 {
-#ifndef OPENSSL_NO_SOCK
 	BIO *ret = NULL, *con = NULL, *ssl = NULL;
 
 	if ((con = BIO_new(BIO_s_connect())) == NULL)
-		return (NULL);
+		goto err;
 	if ((ssl = BIO_new_ssl(ctx, 1)) == NULL)
 		goto err;
 	if ((ret = BIO_push(ssl, con)) == NULL)
 		goto err;
 	return (ret);
+
 err:
-	if (con != NULL)
-		BIO_free(con);
-#endif
+	BIO_free(con);
+	BIO_free(ssl);
 	return (NULL);
 }
 
@@ -555,11 +533,10 @@ BIO_new_ssl(SSL_CTX *ctx, int client)
 	SSL *ssl;
 
 	if ((ret = BIO_new(BIO_f_ssl())) == NULL)
-		return (NULL);
-	if ((ssl = SSL_new(ctx)) == NULL) {
-		BIO_free(ret);
-		return (NULL);
-	}
+		goto err;
+	if ((ssl = SSL_new(ctx)) == NULL)
+		goto err;
+
 	if (client)
 		SSL_set_connect_state(ssl);
 	else
@@ -567,6 +544,10 @@ BIO_new_ssl(SSL_CTX *ctx, int client)
 
 	BIO_set_ssl(ret, ssl, BIO_CLOSE);
 	return (ret);
+
+err:
+	BIO_free(ret);
+	return (NULL);
 }
 
 int

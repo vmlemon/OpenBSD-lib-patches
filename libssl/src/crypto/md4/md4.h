@@ -1,4 +1,4 @@
-/* crypto/md4/md4.h */
+/* $OpenBSD: md4.h,v 1.13 2014/07/10 22:45:57 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,11 +56,12 @@
  * [including the GNU Public Licence.]
  */
 
+#include <stddef.h>
+
 #ifndef HEADER_MD4_H
 #define HEADER_MD4_H
 
-#include <openssl/e_os2.h>
-#include <stddef.h>
+#include <openssl/opensslconf.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -77,14 +78,7 @@ extern "C" {
  * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  */
 
-#if defined(__LP32__)
-#define MD4_LONG unsigned long
-#elif defined(__ILP64__)
-#define MD4_LONG unsigned long
-#define MD4_LONG_LOG2 3
-#else
 #define MD4_LONG unsigned int
-#endif
 
 #define MD4_CBLOCK	64
 #define MD4_LBLOCK	(MD4_CBLOCK/4)

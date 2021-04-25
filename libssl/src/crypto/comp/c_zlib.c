@@ -1,3 +1,4 @@
+/* $OpenBSD: c_zlib.c,v 1.16 2014/06/12 15:49:28 deraadt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -113,8 +114,7 @@ static int
 zlib_stateful_init(COMP_CTX *ctx)
 {
 	int err;
-	struct zlib_state *state =
-	    (struct zlib_state *)malloc(sizeof(struct zlib_state));
+	struct zlib_state *state = malloc(sizeof(struct zlib_state));
 
 	if (state == NULL)
 		goto err;

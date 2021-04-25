@@ -1,4 +1,4 @@
-/* crypto/asn1/t_x509.c */
+/* $OpenBSD: t_x509.c,v 1.25 2014/07/12 16:33:25 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,24 +57,28 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/buffer.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/bn.h>
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
+#include <openssl/buffer.h>
+#include <openssl/err.h>
+#include <openssl/objects.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+
 #ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
 #endif
 #ifndef OPENSSL_NO_EC
 #include <openssl/ec.h>
 #endif
-#include <openssl/objects.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
+#ifndef OPENSSL_NO_RSA
+#include <openssl/rsa.h>
+#endif
+
 #include "asn1_locl.h"
 
-#ifndef OPENSSL_NO_FP_API
 int
 X509_print_fp(FILE *fp, X509 *x)
 {
@@ -96,7 +100,6 @@ X509_print_ex_fp(FILE *fp, X509 *x, unsigned long nmflag, unsigned long cflag)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 X509_print(BIO *bp, X509 *x)
@@ -247,8 +250,7 @@ X509_print_ex(BIO *bp, X509 *x, unsigned long nmflags, unsigned long cflag)
 	ret = 1;
 
 err:
-	if (m != NULL)
-		free(m);
+	free(m);
 	return (ret);
 }
 
@@ -296,8 +298,7 @@ int X509_ocspid_print (BIO *bp, X509 *x)
 	return (1);
 
 err:
-	if (der != NULL)
-		free(der);
+	free(der);
 	return (0);
 }
 
@@ -504,7 +505,9 @@ X509_NAME_print(BIO *bp, X509_NAME *name, int obase)
 	l = 80 - 2 - obase;
 
 	b = X509_NAME_oneline(name, NULL, 0);
-	if (!*b) {
+	if (b == NULL)
+		return 0;
+	if (*b == '\0') {
 		free(b);
 		return 1;
 	}

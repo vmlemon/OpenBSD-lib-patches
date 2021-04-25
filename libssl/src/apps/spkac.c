@@ -1,5 +1,4 @@
-/* apps/spkac.c */
-
+/* $OpenBSD: spkac.c,v 1.21 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999. Based on an original idea by Massimiliano Pala
  * (madwolf@openca.org).
@@ -57,19 +56,21 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/conf.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/lhash.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
-
+#include <openssl/x509.h>
 
 /* -in arg	- input file - default stdin
  * -out arg	- output file - default stdout
@@ -77,7 +78,7 @@
 
 int spkac_main(int, char **);
 
-int 
+int
 spkac_main(int argc, char **argv)
 {
 	ENGINE *e = NULL;
@@ -95,14 +96,6 @@ spkac_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (!bio_err)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	prog = argv[0];
 	argc--;
@@ -281,8 +274,7 @@ end:
 	BIO_free(in);
 	BIO_free_all(out);
 	EVP_PKEY_free(pkey);
-	if (passin)
-		free(passin);
-	
+	free(passin);
+
 	return (ret);
 }

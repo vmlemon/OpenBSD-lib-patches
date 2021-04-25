@@ -1,4 +1,4 @@
-/* crypto/ts/ts_resp_sign.c */
+/* $OpenBSD: ts_rsp_sign.c,v 1.18 2014/07/12 16:03:37 miod Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2002.
  */
@@ -56,20 +56,19 @@
  *
  */
 
-#include "cryptlib.h"
-
-#if defined(OPENSSL_SYS_UNIX)
 #include <sys/time.h>
-#endif
 
+#include <string.h>
+
+#include <openssl/err.h>
 #include <openssl/objects.h>
-#include <openssl/ts.h>
 #include <openssl/pkcs7.h>
+#include <openssl/ts.h>
 
 /* Private function declarations. */
 
 static ASN1_INTEGER *def_serial_cb(struct TS_resp_ctx *, void *);
-static int def_time_cb(struct TS_resp_ctx *, void *, long *sec, long *usec);
+static int def_time_cb(struct TS_resp_ctx *, void *, time_t *sec, long *usec);
 static int def_extension_cb(struct TS_resp_ctx *, X509_EXTENSION *, void *);
 
 static void TS_RESP_CTX_init(TS_RESP_CTX *ctx);
@@ -88,7 +87,7 @@ static int TS_TST_INFO_content_new(PKCS7 *p7);
 static int ESS_add_signing_cert(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc);
 
 static ASN1_GENERALIZEDTIME *TS_RESP_set_genTime_with_precision(
-    ASN1_GENERALIZEDTIME *, long, long, unsigned);
+    ASN1_GENERALIZEDTIME *, time_t, long, unsigned);
 
 /* Default callbacks for response generation. */
 
@@ -110,11 +109,9 @@ err:
 	return NULL;
 }
 
-#if defined(OPENSSL_SYS_UNIX)
-
 /* Use the gettimeofday function call. */
 static int
-def_time_cb(struct TS_resp_ctx *ctx, void *data, long *sec, long *usec)
+def_time_cb(struct TS_resp_ctx *ctx, void *data, time_t *sec, long *usec)
 {
 	struct timeval tv;
 
@@ -131,30 +128,6 @@ def_time_cb(struct TS_resp_ctx *ctx, void *data, long *sec, long *usec)
 
 	return 1;
 }
-
-#else
-
-/* Use the time function call that provides only seconds precision. */
-static int
-def_time_cb(struct TS_resp_ctx *ctx, void *data, long *sec, long *usec)
-{
-	time_t t;
-
-	if (time(&t) == (time_t) - 1) {
-		TSerr(TS_F_DEF_TIME_CB, TS_R_TIME_SYSCALL_ERROR);
-		TS_RESP_CTX_set_status_info(ctx, TS_STATUS_REJECTION,
-		    "Time is not available.");
-		TS_RESP_CTX_add_failure_info(ctx, TS_INFO_TIME_NOT_AVAILABLE);
-		return 0;
-	}
-	/* Return time to caller, only second precision. */
-	*sec = (long) t;
-	*usec = 0;
-
-	return 1;
-}
-
-#endif
 
 static int
 def_extension_cb(struct TS_resp_ctx *ctx, X509_EXTENSION *ext, void *data)
@@ -173,11 +146,10 @@ TS_RESP_CTX_new(void)
 {
 	TS_RESP_CTX *ctx;
 
-	if (!(ctx = (TS_RESP_CTX *) malloc(sizeof(TS_RESP_CTX)))) {
+	if (!(ctx = calloc(1, sizeof(TS_RESP_CTX)))) {
 		TSerr(TS_F_TS_RESP_CTX_NEW, ERR_R_MALLOC_FAILURE);
 		return NULL;
 	}
-	memset(ctx, 0, sizeof(TS_RESP_CTX));
 
 	/* Setting default callbacks. */
 	ctx->serial_cb = def_serial_cb;
@@ -223,8 +195,7 @@ TS_RESP_CTX_set_signer_cert(TS_RESP_CTX *ctx, X509 *signer)
 int
 TS_RESP_CTX_set_signer_key(TS_RESP_CTX *ctx, EVP_PKEY *key)
 {
-	if (ctx->signer_key)
-		EVP_PKEY_free(ctx->signer_key);
+	EVP_PKEY_free(ctx->signer_key);
 	ctx->signer_key = key;
 	CRYPTO_add(&ctx->signer_key->references, +1, CRYPTO_LOCK_EVP_PKEY);
 
@@ -347,13 +318,6 @@ TS_RESP_CTX_set_serial_cb(TS_RESP_CTX *ctx, TS_serial_cb cb, void *data)
 {
 	ctx->serial_cb = cb;
 	ctx->serial_cb_data = data;
-}
-
-void
-TS_RESP_CTX_set_time_cb(TS_RESP_CTX *ctx, TS_time_cb cb, void *data)
-{
-	ctx->time_cb = cb;
-	ctx->time_cb_data = data;
 }
 
 void
@@ -636,7 +600,8 @@ TS_RESP_create_tst_info(TS_RESP_CTX *ctx, ASN1_OBJECT *policy)
 	TS_TST_INFO *tst_info = NULL;
 	ASN1_INTEGER *serial = NULL;
 	ASN1_GENERALIZEDTIME *asn1_time = NULL;
-	long sec, usec;
+	time_t sec;
+	long usec;
 	TS_ACCURACY *accuracy = NULL;
 	const ASN1_INTEGER *nonce;
 	GENERAL_NAME *tsa_name = NULL;
@@ -963,7 +928,7 @@ ESS_add_signing_cert(PKCS7_SIGNER_INFO *si, ESS_SIGNING_CERT *sc)
 	int len;
 
 	len = i2d_ESS_SIGNING_CERT(sc, NULL);
-	if (!(pp = (unsigned char *) malloc(len))) {
+	if (!(pp = malloc(len))) {
 		TSerr(TS_F_ESS_ADD_SIGNING_CERT, ERR_R_MALLOC_FAILURE);
 		goto err;
 	}
@@ -988,9 +953,8 @@ err:
 
 static ASN1_GENERALIZEDTIME *
 TS_RESP_set_genTime_with_precision(ASN1_GENERALIZEDTIME *asn1_time,
-    long sec, long usec, unsigned precision)
+    time_t sec, long usec, unsigned precision)
 {
-	time_t time_sec = (time_t) sec;
 	struct tm *tm = NULL;
 	char genTime_str[17 + TS_MAX_CLOCK_PRECISION_DIGITS];
 	char usecstr[TS_MAX_CLOCK_PRECISION_DIGITS + 2];
@@ -1000,7 +964,7 @@ TS_RESP_set_genTime_with_precision(ASN1_GENERALIZEDTIME *asn1_time,
 	if (precision > TS_MAX_CLOCK_PRECISION_DIGITS)
 		goto err;
 
-	if (!(tm = gmtime(&time_sec)))
+	if (!(tm = gmtime(&sec)))
 		goto err;
 
 	/*

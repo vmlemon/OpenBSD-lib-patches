@@ -1,4 +1,4 @@
-/* crypto/stack/stack.c */
+/* $OpenBSD: stack.c,v 1.18 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -65,15 +65,15 @@
  *
  * 1.0 eay - First version 29/07/92
  */
+
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/stack.h>
+#include <string.h>
+
 #include <openssl/objects.h>
+#include <openssl/stack.h>
 
 #undef MIN_NODES
 #define MIN_NODES	4
-
-const char STACK_version[]="Stack" OPENSSL_VERSION_PTEXT;
 
 #include <errno.h>
 
@@ -98,8 +98,7 @@ sk_dup(_STACK *sk)
 
 	if ((ret = sk_new(sk->comp)) == NULL)
 		goto err;
-	s = (char **)realloc((char *)ret->data,
-	    (unsigned int)sizeof(char *) * sk->num_alloc);
+	s = reallocarray(ret->data, sk->num_alloc, sizeof(char *));
 	if (s == NULL)
 		goto err;
 	ret->data = s;
@@ -131,7 +130,7 @@ sk_new(int (*c)(const void *, const void *))
 
 	if ((ret = malloc(sizeof(_STACK))) == NULL)
 		goto err;
-	if ((ret->data = malloc(sizeof(char *) * MIN_NODES)) == NULL)
+	if ((ret->data = reallocarray(NULL, MIN_NODES, sizeof(char *))) == NULL)
 		goto err;
 	for (i = 0; i < MIN_NODES; i++)
 		ret->data[i] = NULL;
@@ -142,8 +141,7 @@ sk_new(int (*c)(const void *, const void *))
 	return (ret);
 
 err:
-	if (ret)
-		free(ret);
+	free(ret);
 	return (NULL);
 }
 
@@ -155,8 +153,7 @@ sk_insert(_STACK *st, void *data, int loc)
 	if (st == NULL)
 		return 0;
 	if (st->num_alloc <= st->num + 1) {
-		s = realloc((char *)st->data,
-		    (unsigned int)sizeof(char *) * st->num_alloc * 2);
+		s = reallocarray(st->data, st->num_alloc, 2 * sizeof(char *));
 		if (s == NULL)
 			return (0);
 		st->data = s;
@@ -165,19 +162,8 @@ sk_insert(_STACK *st, void *data, int loc)
 	if ((loc >= (int)st->num) || (loc < 0))
 		st->data[st->num] = data;
 	else {
-		int i;
-		char **f, **t;
-
-		f = st->data;
-		t = &(st->data[1]);
-		for (i = st->num; i >= loc; i--)
-			t[i] = f[i];
-
-#ifdef undef /* no memmove on sunos :-( */
-		memmove(&(st->data[loc + 1]),
-		    &(st->data[loc]),
+		memmove(&(st->data[loc + 1]), &(st->data[loc]),
 		    sizeof(char *)*(st->num - loc));
-#endif
 		st->data[loc] = data;
 	}
 	st->num++;
@@ -200,21 +186,14 @@ void *
 sk_delete(_STACK *st, int loc)
 {
 	char *ret;
-	int i, j;
 
 	if (!st || (loc < 0) || (loc >= st->num))
 		return NULL;
 
 	ret = st->data[loc];
 	if (loc != st->num - 1) {
-		j = st->num - 1;
-		for (i = loc; i < j; i++)
-			st->data[i] = st->data[i + 1];
-		/* In theory memcpy is not safe for this
-		 * memcpy( &(st->data[loc]),
-		 *	&(st->data[loc+1]),
-		 *	sizeof(char *)*(st->num-loc-1));
-		 */
+		memmove(&(st->data[loc]), &(st->data[loc + 1]),
+		    sizeof(char *)*(st->num - 1 - loc));
 	}
 	st->num--;
 	return (ret);
@@ -296,7 +275,7 @@ sk_zero(_STACK *st)
 		return;
 	if (st->num <= 0)
 		return;
-	memset((char *)st->data, 0, sizeof(st->data)*st->num);
+	memset(st->data, 0, sizeof(st->data)*st->num);
 	st->num = 0;
 }
 
@@ -318,8 +297,7 @@ sk_free(_STACK *st)
 {
 	if (st == NULL)
 		return;
-	if (st->data != NULL)
-		free(st->data);
+	free(st->data);
 	free(st);
 }
 

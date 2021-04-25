@@ -1,4 +1,4 @@
-/* crypto/bio/bio_dgram.c */
+/* $OpenBSD: bss_dgram.c,v 1.32 2014/07/11 12:17:46 miod Exp $ */
 /* 
  * DTLS implementation written by Nagendra Modadugu
  * (nagendra@cs.stanford.edu) for the OpenSSL project 2005.  
@@ -57,15 +57,19 @@
  *
  */
 
-
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include "cryptlib.h"
-#include <openssl/bio.h>
-#include <netdb.h>
 #include <sys/socket.h>
+
 #include <netinet/in.h>
+
+#include <errno.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <openssl/opensslconf.h>
+
+#include <openssl/bio.h>
 
 #ifndef OPENSSL_NO_DGRAM
 
@@ -217,8 +221,7 @@ dgram_free(BIO *a)
 		return 0;
 
 	data = (bio_dgram_data *)a->ptr;
-	if (data != NULL)
-		free(data);
+	free(data);
 
 	return (1);
 }
@@ -830,8 +833,7 @@ dgram_sctp_free(BIO *a)
 		return 0;
 
 	data = (bio_dgram_sctp_data *)a->ptr;
-	if (data != NULL)
-		free(data);
+	free(data);
 
 	return (1);
 }
@@ -1164,7 +1166,6 @@ dgram_sctp_ctrl(BIO *b, int cmd, long num, void *ptr)
 	bio_dgram_sctp_data *data = NULL;
 	socklen_t sockopt_len = 0;
 	struct sctp_authkeyid authkeyid;
-	struct sctp_authkey *authkey;
 
 	data = (bio_dgram_sctp_data *)b->ptr;
 
@@ -1206,47 +1207,58 @@ dgram_sctp_ctrl(BIO *b, int cmd, long num, void *ptr)
 		ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_NODELAY, &data->in_handshake, sizeof(int));
 		break;
 	case BIO_CTRL_DGRAM_SCTP_ADD_AUTH_KEY:
+	    {
+		struct sctp_authkey *authkey;
+
 		/* New shared key for SCTP AUTH.
 		 * Returns 0 on success, -1 otherwise.
 		 */
 
 		/* Get active key */
 		sockopt_len = sizeof(struct sctp_authkeyid);
-		ret = getsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &authkeyid, &sockopt_len);
+		ret = getsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
+		    &authkeyid, &sockopt_len);
 		if (ret < 0)
 			break;
 
 		/* Add new key */
 		sockopt_len = sizeof(struct sctp_authkey) + 64 * sizeof(uint8_t);
 		authkey = calloc(1, sockopt_len);
+		if (authkey == NULL) {
+			ret = -1;
+			break;
+		}
 		authkey->sca_keynumber = authkeyid.scact_keynumber + 1;
 		authkey->sca_keylength = 64;
 		memcpy(&authkey->sca_key[0], ptr, 64 * sizeof(uint8_t));
 
-		ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_KEY, authkey, sockopt_len);
+		ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_KEY, authkey,
+		    sockopt_len);
+		free(authkey);
 		if (ret < 0)
 			break;
 
 		/* Reset active key */
 		ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
-		&authkeyid, sizeof(struct sctp_authkeyid));
+		    &authkeyid, sizeof(struct sctp_authkeyid));
 		if (ret < 0)
 			break;
-
+	    }
 		break;
 	case BIO_CTRL_DGRAM_SCTP_NEXT_AUTH_KEY:
 		/* Returns 0 on success, -1 otherwise. */
 
 		/* Get active key */
 		sockopt_len = sizeof(struct sctp_authkeyid);
-		ret = getsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &authkeyid, &sockopt_len);
+		ret = getsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
+		    &authkeyid, &sockopt_len);
 		if (ret < 0)
 			break;
 
 		/* Set active key */
 		authkeyid.scact_keynumber = authkeyid.scact_keynumber + 1;
 		ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY,
-		&authkeyid, sizeof(struct sctp_authkeyid));
+		    &authkeyid, sizeof(struct sctp_authkeyid));
 		if (ret < 0)
 			break;
 
@@ -1266,7 +1278,8 @@ dgram_sctp_ctrl(BIO *b, int cmd, long num, void *ptr)
 		if (data->ccs_rcvd == 1 && data->ccs_sent == 1) {
 			/* Get active key */
 			sockopt_len = sizeof(struct sctp_authkeyid);
-			ret = getsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_ACTIVE_KEY, &authkeyid, &sockopt_len);
+			ret = getsockopt(b->num, IPPROTO_SCTP,
+			    SCTP_AUTH_ACTIVE_KEY, &authkeyid, &sockopt_len);
 			if (ret < 0)
 				break;
 
@@ -1276,8 +1289,8 @@ dgram_sctp_ctrl(BIO *b, int cmd, long num, void *ptr)
 			authkeyid.scact_keynumber = authkeyid.scact_keynumber - 1;
 #ifdef SCTP_AUTH_DEACTIVATE_KEY
 			sockopt_len = sizeof(struct sctp_authkeyid);
-			ret = setsockopt(b->num, IPPROTO_SCTP, SCTP_AUTH_DEACTIVATE_KEY,
-			&authkeyid, sockopt_len);
+			ret = setsockopt(b->num, IPPROTO_SCTP,
+			    SCTP_AUTH_DEACTIVATE_KEY, &authkeyid, sockopt_len);
 			if (ret < 0)
 				break;
 #endif

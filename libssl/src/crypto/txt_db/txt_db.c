@@ -1,4 +1,4 @@
-/* crypto/txt_db/txt_db.c */
+/* $OpenBSD: txt_db.c,v 1.18 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,14 +59,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "cryptlib.h"
+
 #include <openssl/buffer.h>
 #include <openssl/txt_db.h>
 
 #undef BUFSIZE
 #define BUFSIZE	512
-
-const char TXT_DB_version[] = "TXT_DB" OPENSSL_VERSION_PTEXT;
 
 TXT_DB *
 TXT_DB_read(BIO *in, int num)
@@ -94,9 +92,9 @@ TXT_DB_read(BIO *in, int num)
 	ret->qual = NULL;
 	if ((ret->data = sk_OPENSSL_PSTRING_new_null()) == NULL)
 		goto err;
-	if ((ret->index = malloc(sizeof(*ret->index)*num)) == NULL)
+	if ((ret->index = reallocarray(NULL, num, sizeof(*ret->index))) == NULL)
 		goto err;
-	if ((ret->qual = malloc(sizeof(*(ret->qual))*num)) == NULL)
+	if ((ret->qual = reallocarray(NULL, num, sizeof(*(ret->qual)))) == NULL)
 		goto err;
 	for (i = 0; i < num; i++) {
 		ret->index[i] = NULL;
@@ -178,12 +176,9 @@ err:
 		if (ret != NULL) {
 			if (ret->data != NULL)
 				sk_OPENSSL_PSTRING_free(ret->data);
-			if (ret->index != NULL)
-				free(ret->index);
-			if (ret->qual != NULL)
-				free(ret->qual);
-			if (ret != NULL)
-				free(ret);
+			free(ret->index);
+			free(ret->qual);
+			free(ret);
 		}
 		return (NULL);
 	} else
@@ -350,8 +345,7 @@ TXT_DB_free(TXT_DB *db)
 				lh_OPENSSL_STRING_free(db->index[i]);
 		free(db->index);
 	}
-	if (db->qual != NULL)
-		free(db->qual);
+	free(db->qual);
 	if (db->data != NULL) {
 		for (i = sk_OPENSSL_PSTRING_num(db->data) - 1; i >= 0; i--) {
 			/* check if any 'fields' have been allocated
@@ -361,8 +355,7 @@ TXT_DB_free(TXT_DB *db)
 			if (max == NULL) /* new row */
 			{
 				for (n = 0; n < db->num_fields; n++)
-					if (p[n] != NULL)
-						free(p[n]);
+					free(p[n]);
 			} else {
 				for (n = 0; n < db->num_fields; n++) {
 					if (((p[n] < (char *)p) ||

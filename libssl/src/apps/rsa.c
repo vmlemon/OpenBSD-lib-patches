@@ -1,4 +1,4 @@
-/* apps/rsa.c */
+/* $OpenBSD: rsa.c,v 1.27 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,20 +57,22 @@
  */
 
 #include <openssl/opensslconf.h>
-#ifndef OPENSSL_NO_RSA
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "apps.h"
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/bn.h>
 
+#include "apps.h"
+
+#include <openssl/bio.h>
+#include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (one of DER, NET or PEM)
  * -outform arg - output format - default PEM
@@ -95,7 +97,7 @@
 
 int rsa_main(int, char **);
 
-int 
+int
 rsa_main(int argc, char **argv)
 {
 	ENGINE *e = NULL;
@@ -115,15 +117,6 @@ rsa_main(int argc, char **argv)
 	int modulus = 0;
 
 	int pvk_encr = 2;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	infile = NULL;
 	outfile = NULL;
@@ -214,9 +207,6 @@ bad:
 		BIO_printf(bio_err, " -des3           encrypt PEM output with ede cbc des using 168 bit key\n");
 #ifndef OPENSSL_NO_IDEA
 		BIO_printf(bio_err, " -idea           encrypt PEM output with cbc idea\n");
-#endif
-#ifndef OPENSSL_NO_SEED
-		BIO_printf(bio_err, " -seed           encrypt PEM output with cbc seed\n");
 #endif
 #ifndef OPENSSL_NO_AES
 		BIO_printf(bio_err, " -aes128, -aes192, -aes256\n");
@@ -349,7 +339,7 @@ bad:
 
 		i = 1;
 		size = i2d_RSA_NET(rsa, NULL, NULL, sgckey);
-		if ((p = (unsigned char *) malloc(size)) == NULL) {
+		if ((p = malloc(size)) == NULL) {
 			BIO_printf(bio_err, "Memory allocation failure\n");
 			goto end;
 		}
@@ -395,11 +385,8 @@ end:
 		BIO_free_all(out);
 	if (rsa != NULL)
 		RSA_free(rsa);
-	if (passin)
-		free(passin);
-	if (passout)
-		free(passout);
-	
+	free(passin);
+	free(passout);
+
 	return (ret);
 }
-#endif

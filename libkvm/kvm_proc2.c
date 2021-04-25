@@ -1,4 +1,4 @@
-/*	$OpenBSD: kvm_proc2.c,v 1.21 2014/03/30 21:54:49 guenther Exp $	*/
+/*	$OpenBSD: kvm_proc2.c,v 1.24 2014/07/08 23:31:22 deraadt Exp $	*/
 /*	$NetBSD: kvm_proc.c,v 1.30 1999/03/24 05:50:50 mrg Exp $	*/
 /*-
  * Copyright (c) 1998 The NetBSD Foundation, Inc.
@@ -71,12 +71,14 @@
 
 #define __need_process
 #include <sys/param.h>
-#include <sys/user.h>
 #include <sys/proc.h>
 #include <sys/exec.h>
 #include <sys/stat.h>
+#include <sys/ucred.h>
 #include <sys/ioctl.h>
 #include <sys/tty.h>
+#include <sys/resource.h>
+#include <sys/resourcevar.h>
 #include <sys/signalvar.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -134,13 +136,13 @@ kvm_proclist(kvm_t *kd, int op, int arg, struct process *pr,
 		}
 		if (process.ps_pgrp == NULL)
 			continue;
+		if (process.ps_flags & PS_EMBRYO)
+			continue;
 		if (KREAD(kd, (u_long)process.ps_mainproc, &proc)) {
 			_kvm_err(kd, kd->program, "can't read proc at %lx",
 			    (u_long)process.ps_mainproc);
 			return (-1);
 		}
-		if (proc.p_stat == SIDL)
-			continue;
 		process_pid = proc.p_pid;
 		if (KREAD(kd, (u_long)process.ps_ucred, &ucred)) {
 			_kvm_err(kd, kd->program, "can't read ucred at %lx",
@@ -275,8 +277,8 @@ kvm_proclist(kvm_t *kd, int op, int arg, struct process *pr,
 
 		vmp = NULL;
 
-		if (proc.p_stat != SIDL && !P_ZOMBIE(&proc) &&
-		    !KREAD(kd, (u_long)proc.p_vmspace, &vm))
+		if ((process.ps_flags & PS_ZOMBIE) == 0 &&
+		    !KREAD(kd, (u_long)process.ps_vmspace, &vm))
 			vmp = &vm;
 
 #define do_copy_str(_d, _s, _l)	kvm_read(kd, (u_long)(_s), (_d), (_l)-1)
@@ -306,7 +308,13 @@ kvm_proclist(kvm_t *kd, int op, int arg, struct process *pr,
 		}
 
 		/* update %cpu for all threads */
-		if (!dothreads) {
+		if (dothreads) {
+			kp.p_pctcpu = proc.p_pctcpu;
+			kp.p_stat   = proc.p_stat;
+		} else {
+			kp.p_pctcpu = 0;
+			kp.p_stat = (process.ps_flags & PS_ZOMBIE) ? SDEAD :
+			    SIDL;
 			for (p = TAILQ_FIRST(&process.ps_threads); p != NULL; 
 			    p = TAILQ_NEXT(&proc, p_thr_link)) {
 				if (KREAD(kd, (u_long)p, &proc)) {
@@ -315,11 +323,24 @@ kvm_proclist(kvm_t *kd, int op, int arg, struct process *pr,
 					    (u_long)p);
 					return (-1);
 				}
-				if (p == process.ps_mainproc)
-					continue;
 				kp.p_pctcpu += proc.p_pctcpu;
+				/*
+				 * find best state:
+				 * ONPROC > RUN > STOP > SLEEP > ...
+				 */
+				if (proc.p_stat == SONPROC ||
+				    kp.p_stat == SONPROC)
+					kp.p_stat = SONPROC;
+				else if (proc.p_stat == SRUN ||
+				    kp.p_stat == SRUN)
+					kp.p_stat = SRUN;
+				else if (proc.p_stat == SSTOP ||
+				    kp.p_stat == SSTOP)
+					kp.p_stat = SSTOP;
+				else if (proc.p_stat == SSLEEP)
+					kp.p_stat = SSLEEP;
 			}
-		}
+                }
 
 		memcpy(bp, &kp, esize);
 		bp += esize;

@@ -1,4 +1,4 @@
-/* apps/ecparam.c */
+/* $OpenBSD: ecparam.c,v 1.23 2014/07/14 00:35:10 deraadt Exp $ */
 /*
  * Written by Nils Larsch for the OpenSSL project.
  */
@@ -70,20 +70,22 @@
  */
 
 #include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_EC
-#include <assert.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
-#include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/ec.h>
-#include <openssl/x509.h>
+#include <openssl/err.h>
 #include <openssl/pem.h>
-
+#include <openssl/x509.h>
 
 /* -inform arg      - input format - default PEM (DER or PEM)
  * -outform arg     - output format - default PEM
@@ -105,7 +107,6 @@
  *                                     explicit
  * -no_seed         - if 'explicit' parameters are chosen do not use the seed
  * -genkey          - generate ec key
- * -rand file       - files to use for random number input
  * -engine e        - use engine e, possibly a hardware device
  */
 
@@ -114,7 +115,7 @@ static int ecparam_print_var(BIO *, BIGNUM *, const char *, int, unsigned char *
 
 int ecparam_main(int, char **);
 
-int 
+int
 ecparam_main(int argc, char **argv)
 {
 	EC_GROUP *group = NULL;
@@ -122,7 +123,7 @@ ecparam_main(int argc, char **argv)
 	int new_form = 0;
 	int asn1_flag = OPENSSL_EC_NAMED_CURVE;
 	int new_asn1_flag = 0;
-	char *curve_name = NULL, *inrand = NULL;
+	char *curve_name = NULL;
 	int list_curves = 0, no_seed = 0, check = 0, badops = 0, text = 0,
 	 i, genkey = 0;
 	char *infile = NULL, *outfile = NULL, *prog;
@@ -133,15 +134,6 @@ ecparam_main(int argc, char **argv)
 	BIGNUM *ec_p = NULL, *ec_a = NULL, *ec_b = NULL, *ec_gen = NULL,
 	*ec_order = NULL, *ec_cofactor = NULL;
 	unsigned char *buffer = NULL;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	informat = FORMAT_PEM;
 	outformat = FORMAT_PEM;
@@ -208,10 +200,6 @@ ecparam_main(int argc, char **argv)
 			noout = 1;
 		else if (strcmp(*argv, "-genkey") == 0) {
 			genkey = 1;
-		} else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
 		} else if (strcmp(*argv, "-engine") == 0) {
 			if (--argc < 1)
 				goto bad;
@@ -270,8 +258,6 @@ bad:
 		    " use the seed\n");
 		BIO_printf(bio_err, " -genkey           generate ec"
 		    " key\n");
-		BIO_printf(bio_err, " -rand file        files to use for"
-		    " random number input\n");
 		BIO_printf(bio_err, " -engine e         use engine e, "
 		    "possibly a hardware device\n");
 		goto end;
@@ -312,7 +298,7 @@ bad:
 
 		crv_len = EC_get_builtin_curves(NULL, 0);
 
-		curves = malloc((int) (sizeof(EC_builtin_curve) * crv_len));
+		curves = reallocarray(NULL, crv_len, sizeof(EC_builtin_curve));
 
 		if (curves == NULL)
 			goto end;
@@ -465,7 +451,7 @@ bad:
 		if ((tmp_len = (size_t) BN_num_bytes(ec_cofactor)) > buf_len)
 			buf_len = tmp_len;
 
-		buffer = (unsigned char *) malloc(buf_len);
+		buffer = malloc(buf_len);
 
 		if (buffer == NULL) {
 			perror("malloc");
@@ -555,8 +541,10 @@ bad:
 		if (eckey == NULL)
 			goto end;
 
-		if (EC_KEY_set_group(eckey, group) == 0)
+		if (EC_KEY_set_group(eckey, group) == 0) {
+			EC_KEY_free(eckey);
 			goto end;
+		}
 
 		if (!EC_KEY_generate_key(eckey)) {
 			EC_KEY_free(eckey);
@@ -589,19 +577,18 @@ end:
 		BN_free(ec_order);
 	if (ec_cofactor)
 		BN_free(ec_cofactor);
-	if (buffer)
-		free(buffer);
+	free(buffer);
 	if (in != NULL)
 		BIO_free(in);
 	if (out != NULL)
 		BIO_free_all(out);
 	if (group != NULL)
 		EC_GROUP_free(group);
-	
+
 	return (ret);
 }
 
-static int 
+static int
 ecparam_print_var(BIO * out, BIGNUM * in, const char *var,
     int len, unsigned char *buffer)
 {

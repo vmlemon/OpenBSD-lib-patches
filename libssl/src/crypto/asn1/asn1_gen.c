@@ -1,4 +1,4 @@
-/* asn1_gen.c */
+/* $OpenBSD: asn1_gen.c,v 1.12 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2002.
  */
@@ -56,8 +56,10 @@
  *
  */
 
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
+#include <openssl/err.h>
 #include <openssl/x509v3.h>
 
 #define ASN1_GEN_FLAG		0x10000
@@ -258,10 +260,8 @@ ASN1_generate_v3(char *str, X509V3_CTX *cnf)
 	ret = d2i_ASN1_TYPE(NULL, &cp, len);
 
 err:
-	if (orig_der)
-		free(orig_der);
-	if (new_der)
-		free(new_der);
+	free(orig_der);
+	free(new_der);
 
 	return ret;
 }
@@ -476,8 +476,7 @@ asn1_multi(int utype, const char *section, X509V3_CTX *cnf)
 	der = NULL;
 
 bad:
-	if (der)
-		free(der);
+	free(der);
 	if (sk)
 		sk_ASN1_TYPE_pop_free(sk, ASN1_TYPE_free);
 	if (sect)

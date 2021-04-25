@@ -1,4 +1,4 @@
-/* crypto/des/enc_writ.c */
+/* $OpenBSD: enc_writ.c,v 1.12 2014/07/11 08:44:48 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,14 @@
  */
 
 #include <errno.h>
-#include <time.h>
 #include <stdio.h>
-#include "cryptlib.h"
-#include "des_locl.h"
+#include <time.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/rand.h>
+
+#include "des_locl.h"
 
 /*
  * WARNINGS:

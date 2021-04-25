@@ -1,4 +1,4 @@
-/* crypto/asn1/a_object.c */
+/* $OpenBSD: a_object.c,v 1.22 2014/07/12 16:03:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,13 +56,15 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <limits.h>
-#include "cryptlib.h"
-#include <openssl/buffer.h>
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/asn1.h>
-#include <openssl/objects.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/buffer.h>
+#include <openssl/objects.h>
 
 int
 i2d_ASN1_OBJECT(ASN1_OBJECT *a, unsigned char **pp)
@@ -204,15 +206,13 @@ a2d_ASN1_OBJECT(unsigned char *out, int olen, const char *buf, int num)
 	}
 	if (tmp != ftmp)
 		free(tmp);
-	if (bl)
-		BN_free(bl);
+	BN_free(bl);
 	return (len);
 
 err:
 	if (tmp != ftmp)
 		free(tmp);
-	if (bl)
-		BN_free(bl);
+	BN_free(bl);
 	return (0);
 }
 
@@ -310,16 +310,15 @@ c2i_ASN1_OBJECT(ASN1_OBJECT **a, const unsigned char **pp, long len)
 	/* once detached we can change it */
 	if ((data == NULL) || (ret->length < len)) {
 		ret->length = 0;
-		if (data != NULL)
-			free(data);
-		data = malloc(len ? (int)len : 1);
+		free(data);
+		data = malloc(len ? len : 1);
 		if (data == NULL) {
 			i = ERR_R_MALLOC_FAILURE;
 			goto err;
 		}
 		ret->flags |= ASN1_OBJECT_FLAG_DYNAMIC_DATA;
 	}
-	memcpy(data, p, (int)len);
+	memcpy(data, p, len);
 	/* reattach data to object, after which it remains const */
 	ret->data = data;
 	ret->length = (int)len;
@@ -365,17 +364,12 @@ ASN1_OBJECT_free(ASN1_OBJECT *a)
 	if (a == NULL)
 		return;
 	if (a->flags & ASN1_OBJECT_FLAG_DYNAMIC_STRINGS) {
-#ifndef CONST_STRICT /* disable purely for compile-time strict const checking. Doing this on a "real" compile will cause memory leaks */
-		if (a->sn != NULL)
-			free((void *)a->sn);
-		if (a->ln != NULL)
-			free((void *)a->ln);
-#endif
+		free((void *)a->sn);
+		free((void *)a->ln);
 		a->sn = a->ln = NULL;
 	}
 	if (a->flags & ASN1_OBJECT_FLAG_DYNAMIC_DATA) {
-		if (a->data != NULL)
-			free((void *)a->data);
+		free((void *)a->data);
 		a->data = NULL;
 		a->length = 0;
 	}

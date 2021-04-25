@@ -1,4 +1,4 @@
-/* apps/ciphers.c */
+/* $OpenBSD: ciphers.c,v 1.26 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,10 +59,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-
 
 static const char *ciphers_usage[] = {
 	"usage: ciphers args\n",
@@ -93,13 +94,7 @@ ciphers_main(int argc, char **argv)
 
 	meth = SSLv3_server_method();
 
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
 	STDout = BIO_new_fp(stdout, BIO_NOCLOSE);
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	argc--;
 	argv++;
@@ -128,7 +123,6 @@ ciphers_main(int argc, char **argv)
 			BIO_printf(bio_err, "%s", *pp);
 		goto end;
 	}
-	OpenSSL_add_ssl_algorithms();
 
 	ctx = SSL_CTX_new(meth);
 	if (ctx == NULL)
@@ -142,7 +136,6 @@ ciphers_main(int argc, char **argv)
 	ssl = SSL_new(ctx);
 	if (ssl == NULL)
 		goto err;
-
 
 	if (!verbose) {
 		for (i = 0; ; i++) {
@@ -184,7 +177,6 @@ ciphers_main(int argc, char **argv)
 	ret = 0;
 	if (0) {
 err:
-		SSL_load_error_strings();
 		ERR_print_errors(bio_err);
 	}
 
@@ -195,6 +187,6 @@ end:
 		SSL_free(ssl);
 	if (STDout != NULL)
 		BIO_free_all(STDout);
-	
+
 	return (ret);
 }

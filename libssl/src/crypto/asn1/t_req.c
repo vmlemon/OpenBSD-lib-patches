@@ -1,4 +1,4 @@
-/* crypto/asn1/t_req.c */
+/* $OpenBSD: t_req.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,20 +57,23 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/buffer.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/bn.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
+
 #ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
 #endif
+#ifndef OPENSSL_NO_RSA
+#include <openssl/rsa.h>
+#endif
 
-#ifndef OPENSSL_NO_FP_API
 int
 X509_REQ_print_fp(FILE *fp, X509_REQ *x)
 {
@@ -86,7 +89,6 @@ X509_REQ_print_fp(FILE *fp, X509_REQ *x)
 	BIO_free(b);
 	return (ret);
 }
-#endif
 
 int
 X509_REQ_print_ex(BIO *bp, X509_REQ *x, unsigned long nmflags,

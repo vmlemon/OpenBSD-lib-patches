@@ -1,4 +1,4 @@
-/* crypto/ecdh/ech_ossl.c */
+/* $OpenBSD: ech_ossl.c,v 1.8 2014/07/12 16:03:37 miod Exp $ */
 /* ====================================================================
  * Copyright 2002 Sun Microsystems, Inc. ALL RIGHTS RESERVED.
  *
@@ -67,17 +67,17 @@
  *
  */
 
-
-#include <string.h>
 #include <limits.h>
+#include <string.h>
 
-#include "cryptlib.h"
+#include <openssl/opensslconf.h>
+
+#include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/obj_mac.h>
+#include <openssl/sha.h>
 
 #include "ech_locl.h"
-#include <openssl/err.h>
-#include <openssl/sha.h>
-#include <openssl/obj_mac.h>
-#include <openssl/bn.h>
 
 static int ecdh_compute_key(void *out, size_t len, const EC_POINT *pub_key,
 	EC_KEY *ecdh, 
@@ -201,9 +201,10 @@ static int ecdh_compute_key(void *out, size_t outlen, const EC_POINT *pub_key,
 		}
 	
 err:
-	if (tmp) EC_POINT_free(tmp);
-	if (ctx) BN_CTX_end(ctx);
-	if (ctx) BN_CTX_free(ctx);
-	if (buf) free(buf);
+	EC_POINT_free(tmp);
+	if (ctx)
+		BN_CTX_end(ctx);
+	BN_CTX_free(ctx);
+	free(buf);
 	return(ret);
 	}

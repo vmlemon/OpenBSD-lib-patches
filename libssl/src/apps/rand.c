@@ -1,4 +1,4 @@
-/* apps/rand.c */
+/* $OpenBSD: rand.c,v 1.22 2014/07/14 00:35:10 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2001 The OpenSSL Project.  All rights reserved.
  *
@@ -53,19 +53,17 @@
  *
  */
 
-#include "apps.h"
-
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "apps.h"
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
-
 /* -out file         - write to file
- * -rand file:file   - PRNG seed files
  * -base64           - base64 encode output
  * -hex              - hex encode output
  * num               - write 'num' bytes
@@ -73,13 +71,12 @@
 
 int rand_main(int, char **);
 
-int 
+int
 rand_main(int argc, char **argv)
 {
 	int i, r, ret = 1;
 	int badopt;
 	char *outfile = NULL;
-	char *inrand = NULL;
 	int base64 = 0;
 	int hex = 0;
 	BIO *out = NULL;
@@ -87,15 +84,6 @@ rand_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto err;
 
 	badopt = 0;
 	i = 0;
@@ -114,12 +102,7 @@ rand_main(int argc, char **argv)
 				badopt = 1;
 		}
 #endif
-		else if (strcmp(argv[i], "-rand") == 0) {
-			if ((argv[i + 1] != NULL) && (inrand == NULL))
-				inrand = argv[++i];
-			else
-				badopt = 1;
-		} else if (strcmp(argv[i], "-base64") == 0) {
+		else if (strcmp(argv[i], "-base64") == 0) {
 			if (!base64)
 				base64 = 1;
 			else
@@ -153,7 +136,6 @@ rand_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err, "-engine e             - use engine e, possibly a hardware device.\n");
 #endif
-		BIO_printf(bio_err, "-rand file:file:... - seed PRNG from files\n");
 		BIO_printf(bio_err, "-base64               - base64 encode output\n");
 		BIO_printf(bio_err, "-hex                  - hex encode output\n");
 		goto err;
@@ -207,6 +189,6 @@ err:
 	ERR_print_errors(bio_err);
 	if (out)
 		BIO_free_all(out);
-	
+
 	return (ret);
 }

@@ -1,4 +1,4 @@
-/* crypto/ecdsa/ecdsa_vrf.c */
+/* $OpenBSD: ecs_vrf.c,v 1.3 2014/07/10 22:45:57 jsing Exp $ */
 /*
  * Written by Nils Larsch for the OpenSSL project
  */
@@ -55,6 +55,8 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
+#include <openssl/opensslconf.h>
 
 #include "ecs_locl.h"
 #ifndef OPENSSL_NO_ENGINE

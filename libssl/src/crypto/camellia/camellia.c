@@ -1,4 +1,4 @@
-/* crypto/camellia/camellia.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: camellia.c,v 1.7 2014/07/10 22:45:56 jsing Exp $ */
 /* ====================================================================
  * Copyright 2006 NTT (Nippon Telegraph and Telephone Corporation) . 
  * ALL RIGHTS RESERVED.
@@ -81,10 +81,12 @@
  * words reasonable performance even with not so modern compilers.
  */
 
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/opensslconf.h>
+
 #include "camellia.h"
 #include "cmll_locl.h"
-#include <string.h>
-#include <stdlib.h>
 
 /* 32-bit rotations */
 #if !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_NO_INLINE_ASM)

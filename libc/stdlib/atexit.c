@@ -1,4 +1,4 @@
-/*	$OpenBSD: atexit.c,v 1.17 2013/12/28 18:38:42 kettenis Exp $ */
+/*	$OpenBSD: atexit.c,v 1.20 2014/07/11 09:51:37 kettenis Exp $ */
 /*
  * Copyright (c) 2002 Daniel Hartmeier
  * All rights reserved.
@@ -38,6 +38,7 @@
 #include "thread_private.h"
 
 struct atexit *__atexit;
+static int restartloop;
 
 /*
  * Function pointers are stored in a linked list of pages. The list
@@ -90,11 +91,12 @@ __cxa_atexit(void (*func)(void *), void *arg, void *dso)
 		__atexit = p;
 	}
 	fnp = &p->fns[p->ind++];
-	fnp->fn_ptr.cxa_func = func;
+	fnp->fn_ptr = func;
 	fnp->fn_arg = arg;
 	fnp->fn_dso = dso;
 	if (mprotect(p, pgsize, PROT_READ))
 		goto unlock;
+	restartloop = 1;
 	ret = 0;
 unlock:
 	_ATEXIT_UNLOCK();
@@ -114,11 +116,14 @@ __cxa_finalize(void *dso)
 	int n, pgsize = getpagesize();
 	static int call_depth;
 
+	_ATEXIT_LOCK();
 	call_depth++;
 
+restart:
+	restartloop = 0;
 	for (p = __atexit; p != NULL; p = p->next) {
 		for (n = p->ind; --n >= 0;) {
-			if (p->fns[n].fn_ptr.cxa_func == NULL)
+			if (p->fns[n].fn_ptr == NULL)
 				continue;	/* already called */
 			if (dso != NULL && dso != p->fns[n].fn_dso)
 				continue;	/* wrong DSO */
@@ -129,13 +134,14 @@ __cxa_finalize(void *dso)
 			 */
 			fn = p->fns[n];
 			if (mprotect(p, pgsize, PROT_READ | PROT_WRITE) == 0) {
-				p->fns[n].fn_ptr.cxa_func = NULL;
+				p->fns[n].fn_ptr = NULL;
 				mprotect(p, pgsize, PROT_READ);
 			}
-			if (fn.fn_dso != NULL)
-				(*fn.fn_ptr.cxa_func)(fn.fn_arg);
-			else
-				(*fn.fn_ptr.std_func)();
+			_ATEXIT_UNLOCK();
+			(*fn.fn_ptr)(fn.fn_arg);
+			_ATEXIT_LOCK();
+			if (restartloop)
+				goto restart;
 		}
 	}
 
@@ -154,6 +160,7 @@ __cxa_finalize(void *dso)
 		}
 		__atexit = NULL;
 	}
+	_ATEXIT_UNLOCK();
 }
 
 /*
@@ -185,10 +192,11 @@ __atexit_register_cleanup(void (*func)(void))
 		if (mprotect(p, pgsize, PROT_READ | PROT_WRITE))
 			goto unlock;
 	}
-	p->fns[0].fn_ptr.std_func = func;
+	p->fns[0].fn_ptr = (void (*)(void *))func;
 	p->fns[0].fn_arg = NULL;
 	p->fns[0].fn_dso = NULL;
 	mprotect(p, pgsize, PROT_READ);
+	restartloop = 1;
 unlock:
 	_ATEXIT_UNLOCK();
 }

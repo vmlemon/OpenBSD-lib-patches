@@ -1,4 +1,4 @@
-/* crypto/asn1/a_octet.c */
+/* $OpenBSD: a_octet.c,v 1.9 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,7 +57,7 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
 
 ASN1_OCTET_STRING *

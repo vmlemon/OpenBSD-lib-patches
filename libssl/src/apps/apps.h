@@ -1,4 +1,4 @@
-/* apps/apps.h */
+/* $OpenBSD: apps.h,v 1.35 2014/07/11 09:24:44 beck Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -112,25 +112,26 @@
 #ifndef HEADER_APPS_H
 #define HEADER_APPS_H
 
-#include <openssl/e_os2.h>
+#include <openssl/opensslconf.h>
+
 #include <openssl/bio.h>
-#include <openssl/x509.h>
-#include <openssl/lhash.h>
 #include <openssl/conf.h>
+#include <openssl/lhash.h>
+#include <openssl/ossl_typ.h>
 #include <openssl/txt_db.h>
+#include <openssl/x509.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+
 #ifndef OPENSSL_NO_OCSP
 #include <openssl/ocsp.h>
 #endif
-#include <openssl/ossl_typ.h>
 
 extern CONF *config;
 extern char *default_config_file;
 extern BIO *bio_err;
-
-#include <signal.h>
 
 typedef struct args_st {
 	char **data;
@@ -143,7 +144,7 @@ typedef struct pw_cb_data {
 	const char *prompt_info;
 } PW_CB_DATA;
 
-int password_callback(char *buf, int bufsiz, int verify, PW_CB_DATA *cb_data);
+int password_callback(char *buf, int bufsiz, int verify, void *cb_data);
 
 int setup_ui_method(void);
 void destroy_ui_method(void);
@@ -243,13 +244,6 @@ int do_X509_REQ_sign(BIO *err, X509_REQ *x, EVP_PKEY *pkey, const EVP_MD *md,
     STACK_OF(OPENSSL_STRING) *sigopts);
 int do_X509_CRL_sign(BIO *err, X509_CRL *x, EVP_PKEY *pkey, const EVP_MD *md,
     STACK_OF(OPENSSL_STRING) *sigopts);
-#ifndef OPENSSL_NO_PSK
-extern char *psk_key;
-#endif
-#ifndef OPENSSL_NO_JPAKE
-void jpake_client_auth(BIO *out, BIO *conn, const char *secret);
-void jpake_server_auth(BIO *out, BIO *conn, const char *secret);
-#endif
 
 #if !defined(OPENSSL_NO_TLSEXT) && !defined(OPENSSL_NO_NEXTPROTONEG)
 unsigned char *next_protos_parse(unsigned short *outlen, const char *in);

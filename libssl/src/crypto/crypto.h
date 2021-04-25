@@ -1,4 +1,4 @@
-/* crypto/crypto.h */
+/* $OpenBSD: crypto.h,v 1.32 2014/07/10 22:45:56 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2006 The OpenSSL Project.  All rights reserved.
  *
@@ -114,16 +114,13 @@
  * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifndef HEADER_CRYPTO_H
 #define HEADER_CRYPTO_H
 
-#include <stdlib.h>
-
-#include <openssl/e_os2.h>
-
-#ifndef OPENSSL_NO_FP_API
-#include <stdio.h>
-#endif
+#include <openssl/opensslconf.h>
 
 #include <openssl/stack.h>
 #include <openssl/safestack.h>
@@ -274,7 +271,6 @@ typedef struct bio_st BIO_dummy;
 
 struct crypto_ex_data_st {
 	STACK_OF(void) *sk;
-	int dummy; /* gcc is screwing up this data structure :-( */
 };
 DECLARE_STACK_OF(void)
 
@@ -316,7 +312,6 @@ DECLARE_STACK_OF(CRYPTO_EX_DATA_FUNCS)
  * via CRYPTO_ex_data_new_class). */
 #define CRYPTO_EX_INDEX_USER		100
 
-
 /* This is the default callbacks, but we can have others as well:
  * this is needed in Win32 where the application malloc and the
  * library malloc may not be the same.
@@ -347,11 +342,6 @@ int CRYPTO_is_mem_check_on(void);
 /* for applications */
 #define MemCheck_start() CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON)
 #define MemCheck_stop()	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_OFF)
-
-/* for library-internal use */
-#define MemCheck_on()	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ENABLE)
-#define MemCheck_off()	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_DISABLE)
-#define is_MemCheck_on() CRYPTO_is_mem_check_on()
 
 #define OPENSSL_malloc(num)	CRYPTO_malloc((int)num,__FILE__,__LINE__)
 #define OPENSSL_strdup(str)	CRYPTO_strdup((str),__FILE__,__LINE__)
@@ -471,12 +461,14 @@ void CRYPTO_get_mem_debug_functions(
     void (**r)(void *, void *, int, const char *, int, int),
     void (**f)(void *, int), void (**so)(long), long (**go)(void));
 
+#ifndef LIBRESSL_INTERNAL
 void *CRYPTO_malloc_locked(int num, const char *file, int line);
 void CRYPTO_free_locked(void *ptr);
 void *CRYPTO_malloc(int num, const char *file, int line);
 char *CRYPTO_strdup(const char *str, const char *file, int line);
 void CRYPTO_free(void *ptr);
 void *CRYPTO_realloc(void *addr, int num, const char *file, int line);
+#endif
 void *CRYPTO_realloc_clean(void *addr, int old_num, int num,
     const char *file, int line);
 void *CRYPTO_remalloc(void *addr, int num, const char *file, int line);
@@ -500,9 +492,12 @@ int CRYPTO_remove_all_info(void);
  * 0:	called before the actual memory allocation has taken place
  * 1:	called after the actual memory allocation has taken place
  */
-void CRYPTO_dbg_malloc(void *addr, int num, const char *file, int line, int before_p);
-void CRYPTO_dbg_realloc(void *addr1, void *addr2, int num, const char *file, int line, int before_p);
-void CRYPTO_dbg_free(void *addr, int before_p);
+void CRYPTO_dbg_malloc(void *addr, int num, const char *file, int line, int before_p)
+	__attribute__ ((deprecated));
+void CRYPTO_dbg_realloc(void *addr1, void *addr2, int num, const char *file, int line, int before_p)
+	__attribute__ ((deprecated));
+void CRYPTO_dbg_free(void *addr, int before_p)
+	__attribute__ ((deprecated));
 /* Tell the debugging code about options.  By default, the following values
  * apply:
  *
@@ -511,13 +506,13 @@ void CRYPTO_dbg_free(void *addr, int before_p);
  * V_CRYPTO_MDEBUG_THREAD (2):  Set the "Show Thread Number" option.
  * V_CRYPTO_MDEBUG_ALL (3):     1 + 2
  */
-void CRYPTO_dbg_set_options(long bits);
-long CRYPTO_dbg_get_options(void);
+void CRYPTO_dbg_set_options(long bits)
+	__attribute__ ((deprecated));
+long CRYPTO_dbg_get_options(void)
+	__attribute__ ((deprecated));
 
 
-#ifndef OPENSSL_NO_FP_API
 void CRYPTO_mem_leaks_fp(FILE *);
-#endif
 void CRYPTO_mem_leaks(struct bio_st *bio);
 /* unsigned long order, char *file, int line, int num_bytes, char *addr */
 typedef void *CRYPTO_MEM_LEAK_CB(unsigned long, const char *, int, int, void *);
@@ -532,12 +527,6 @@ unsigned long *OPENSSL_ia32cap_loc(void);
 int OPENSSL_isservice(void);
 
 void OPENSSL_init(void);
-
-#define fips_md_init(alg) fips_md_init_ctx(alg, alg)
-
-#define fips_md_init_ctx(alg, cx) \
-	int alg##_Init(cx##_CTX *c)
-#define fips_cipher_abort(alg) while(0)
 
 /* CRYPTO_memcmp returns zero iff the |len| bytes at |a| and |b| are equal. It
  * takes an amount of time dependent on |len|, but independent of the contents

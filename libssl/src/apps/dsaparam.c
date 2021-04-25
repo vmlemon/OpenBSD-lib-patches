@@ -1,4 +1,4 @@
-/* apps/dsaparam.c */
+/* $OpenBSD: dsaparam.c,v 1.34 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,27 +56,28 @@
  * [including the GNU Public Licence.]
  */
 
-#include <openssl/opensslconf.h>/* for OPENSSL_NO_DSA */
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_DSA */
+
 /* Until the key-gen callbacks are modified to use newer prototypes, we allow
  * deprecated functions for openssl-internal code */
 #ifdef OPENSSL_NO_DEPRECATED
 #undef OPENSSL_NO_DEPRECATED
 #endif
 
-#ifndef OPENSSL_NO_DSA
-#include <assert.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include "apps.h"
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/bn.h>
-#include <openssl/dsa.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
+#include <time.h>
 
+#include "apps.h"
+
+#include <openssl/bio.h>
+#include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/dsa.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (DER or PEM)
  * -outform arg - output format - default PEM
@@ -115,23 +116,15 @@ dsaparam_main(int argc, char **argv)
 	int i, badops = 0, text = 0;
 	BIO *in = NULL, *out = NULL;
 	int informat, outformat, noout = 0, C = 0, ret = 1;
-	char *infile, *outfile, *prog, *inrand = NULL;
+	char *infile, *outfile, *prog;
 	int numbits = -1, num, genkey = 0;
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
 #ifdef GENCB_TEST
+	const char *errstr = NULL;
 	int timebomb = 0;
 #endif
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	infile = NULL;
 	outfile = NULL;
@@ -170,7 +163,9 @@ dsaparam_main(int argc, char **argv)
 		else if (strcmp(*argv, "-timebomb") == 0) {
 			if (--argc < 1)
 				goto bad;
-			timebomb = atoi(*(++argv));
+			timebomb = strtonum(*(++argv), 0, INT_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		}
 #endif
 		else if (strcmp(*argv, "-text") == 0)
@@ -179,10 +174,6 @@ dsaparam_main(int argc, char **argv)
 			C = 1;
 		else if (strcmp(*argv, "-genkey") == 0) {
 			genkey = 1;
-		} else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
 		} else if (strcmp(*argv, "-noout") == 0)
 			noout = 1;
 		else if (sscanf(*argv, "%d", &num) == 1) {
@@ -209,7 +200,6 @@ bad:
 		BIO_printf(bio_err, " -C            Output C code\n");
 		BIO_printf(bio_err, " -noout        no output\n");
 		BIO_printf(bio_err, " -genkey       generate a DSA key\n");
-		BIO_printf(bio_err, " -rand         files to use for random number input\n");
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err, " -engine e     use engine e, possibly a hardware device.\n");
 #endif
@@ -307,7 +297,7 @@ bad:
 
 		len = BN_num_bytes(dsa->p);
 		bits_p = BN_num_bits(dsa->p);
-		data = (unsigned char *) malloc(len + 20);
+		data = malloc(len + 20);
 		if (data == NULL) {
 			perror("malloc");
 			goto end;
@@ -337,6 +327,7 @@ bad:
 				printf("\n\t");
 			printf("0x%02X, ", data[i]);
 		}
+		free(data);
 		printf("\n\t};\n\n");
 
 		printf("DSA *get_dsa%d()\n\t{\n", bits_p);
@@ -397,7 +388,7 @@ end:
 		BIO_free_all(out);
 	if (dsa != NULL)
 		DSA_free(dsa);
-	
+
 	return (ret);
 }
 
@@ -422,4 +413,3 @@ dsa_cb(int p, int n, BN_GENCB * cb)
 #endif
 	return 1;
 }
-#endif

@@ -1,4 +1,4 @@
-/*	$OpenBSD: random.c,v 1.19 2013/08/01 19:42:08 kettenis Exp $ */
+/*	$OpenBSD: random.c,v 1.23 2014/07/13 14:21:14 tedu Exp $ */
 /*
  * Copyright (c) 1983 Regents of the University of California.
  * All rights reserved.
@@ -176,6 +176,8 @@ static int rand_type = TYPE_3;
 static int rand_deg = DEG_3;
 static int rand_sep = SEP_3;
 
+static int use_arc4random;
+
 _THREAD_PRIVATE_MUTEX(random);
 static long random_l(void);
 
@@ -201,6 +203,7 @@ srandom_l(unsigned int x)
 	int32_t test;
 	div_t val;
 
+	use_arc4random = 0;
 	if (rand_type == TYPE_0)
 		state[0] = x;
 	else {
@@ -242,8 +245,7 @@ __warn_references(srandom,
  * srandomdev:
  *
  * Many programs choose the seed value in a totally predictable manner.
- * This often causes problems.  We seed the generator using random
- * data from the kernel.
+ * This often causes problems.  We seed the generator using random data.
  * Note that this particular seeding procedure can generate states
  * which are impossible to reproduce by calling srandom() with any
  * value, since the succeeding terms in the state buffer are no longer
@@ -252,23 +254,10 @@ __warn_references(srandom,
 void
 srandomdev(void)
 {
-	int mib[2];
 	size_t len;
 
 	LOCK();
-	if (rand_type == TYPE_0)
-		len = sizeof(state[0]);
-	else
-		len = rand_deg * sizeof(state[0]);
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_ARND;
-	sysctl(mib, 2, state, &len, NULL, 0);
-
-	if (rand_type != TYPE_0) {
-		fptr = &state[rand_sep];
-		rptr = &state[0];
-	}
+	use_arc4random = 1;
 	UNLOCK();
 }
 
@@ -302,6 +291,7 @@ initstate(u_int seed, char *arg_state, size_t n)
 	char *ostate = (char *)(&state[-1]);
 
 	LOCK();
+	use_arc4random = 0;
 	if (rand_type == TYPE_0)
 		state[-1] = rand_type;
 	else
@@ -366,6 +356,7 @@ setstate(char *arg_state)
 	char *ostate = (char *)(&state[-1]);
 
 	LOCK();
+	use_arc4random = 0;
 	if (rand_type == TYPE_0)
 		state[-1] = rand_type;
 	else
@@ -415,6 +406,9 @@ static long
 random_l(void)
 {
 	int32_t i;
+
+	if (use_arc4random)
+		return arc4random() & 0x7fffffff;
 
 	if (rand_type == TYPE_0)
 		i = state[0] = (state[0] * 1103515245 + 12345) & 0x7fffffff;

@@ -1,4 +1,4 @@
-/* crypto/bio/bio_cb.c */
+/* $OpenBSD: bio_cb.c,v 1.15 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,11 +57,11 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include "cryptlib.h"
-#include <openssl/bio.h>
+#include <string.h>
+
 #include <openssl/err.h>
+#include <openssl/bio.h>
 
 long
 BIO_debug_callback(BIO *bio, int cmd, const char *argp, int argi, long argl,
@@ -139,9 +139,7 @@ BIO_debug_callback(BIO *bio, int cmd, const char *argp, int argi, long argl,
 	b = (BIO *)bio->cb_arg;
 	if (b != NULL)
 		BIO_write(b, buf, strlen(buf));
-#if !defined(OPENSSL_NO_STDIO)
 	else
 		fputs(buf, stderr);
-#endif
 	return (r);
 }

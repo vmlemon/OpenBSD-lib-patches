@@ -1,4 +1,4 @@
-/* apps/dsa.c */
+/* $OpenBSD: dsa.c,v 1.28 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,21 +56,23 @@
  * [including the GNU Public Licence.]
  */
 
-#include <openssl/opensslconf.h>/* for OPENSSL_NO_DSA */
-#ifndef OPENSSL_NO_DSA
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_DSA */
+
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
-#include "apps.h"
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/dsa.h>
-#include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#include <openssl/bn.h>
+#include <string.h>
 
+#include "apps.h"
+
+#include <openssl/bio.h>
+#include <openssl/bn.h>
+#include <openssl/dsa.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (one of DER, NET or PEM)
  * -outform arg - output format - default PEM
@@ -112,15 +114,6 @@ dsa_main(int argc, char **argv)
 	int modulus = 0;
 
 	int pvk_encr = 2;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 #ifndef OPENSSL_NO_ENGINE
 	engine = NULL;
@@ -216,9 +209,6 @@ bad:
 #ifndef OPENSSL_NO_CAMELLIA
 		BIO_printf(bio_err, " -camellia128, -camellia192, -camellia256\n");
 		BIO_printf(bio_err, "                 encrypt PEM output with cbc camellia\n");
-#endif
-#ifndef OPENSSL_NO_SEED
-		BIO_printf(bio_err, " -seed           encrypt PEM output with cbc seed\n");
 #endif
 		BIO_printf(bio_err, " -text           print the key in text\n");
 		BIO_printf(bio_err, " -noout          don't print key out\n");
@@ -336,11 +326,8 @@ end:
 		BIO_free_all(out);
 	if (dsa != NULL)
 		DSA_free(dsa);
-	if (passin)
-		free(passin);
-	if (passout)
-		free(passout);
-	
+	free(passin);
+	free(passout);
+
 	return (ret);
 }
-#endif

@@ -1,4 +1,4 @@
-/* crypto/pem/pem_seal.c */
+/* $OpenBSD: pem_seal.c,v 1.20 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,16 +56,20 @@
  * [including the GNU Public Licence.]
  */
 
-#include <openssl/opensslconf.h>	/* for OPENSSL_NO_RSA */
-#ifndef OPENSSL_NO_RSA
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_RSA */
+
+#ifndef OPENSSL_NO_RSA
+
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <openssl/objects.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
+#include <openssl/x509.h>
 
 int
 PEM_SealInit(PEM_ENCODE_SEAL_CTX *ctx, EVP_CIPHER *type, EVP_MD *md_type,
@@ -85,7 +89,7 @@ PEM_SealInit(PEM_ENCODE_SEAL_CTX *ctx, EVP_CIPHER *type, EVP_MD *md_type,
 		if (j > max)
 			max = j;
 	}
-	s = (char *)malloc(max*2);
+	s = reallocarray(NULL, max, 2);
 	if (s == NULL) {
 		PEMerr(PEM_F_PEM_SEALINIT, ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -113,8 +117,7 @@ PEM_SealInit(PEM_ENCODE_SEAL_CTX *ctx, EVP_CIPHER *type, EVP_MD *md_type,
 	ret = npubk;
 
 err:
-	if (s != NULL)
-		free(s);
+	free(s);
 	OPENSSL_cleanse(key, EVP_MAX_KEY_LENGTH);
 	return (ret);
 }
@@ -159,7 +162,7 @@ PEM_SealFinal(PEM_ENCODE_SEAL_CTX *ctx, unsigned char *sig, int *sigl,
 	i = RSA_size(priv->pkey.rsa);
 	if (i < 100)
 		i = 100;
-	s = (unsigned char *)malloc(i*2);
+	s = reallocarray(NULL, i, 2);
 	if (s == NULL) {
 		PEMerr(PEM_F_PEM_SEALFINAL, ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -182,8 +185,7 @@ PEM_SealFinal(PEM_ENCODE_SEAL_CTX *ctx, unsigned char *sig, int *sigl,
 err:
 	EVP_MD_CTX_cleanup(&ctx->md);
 	EVP_CIPHER_CTX_cleanup(&ctx->cipher);
-	if (s != NULL)
-		free(s);
+	free(s);
 	return (ret);
 }
 #endif

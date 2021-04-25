@@ -1,4 +1,4 @@
-/* crypto/lhash/lh_stats.c */
+/* $OpenBSD: lh_stats.c,v 1.12 2014/07/11 08:44:48 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,9 +59,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-/* If you wish to build this outside of SSLeay, remove the following lines
- * and things should work as expected */
-#include "cryptlib.h"
+
+#include <openssl/opensslconf.h>
 
 #ifndef OPENSSL_NO_BIO
 #include <openssl/bio.h>
@@ -140,7 +139,6 @@ lh_node_usage_stats(LHASH *lh, FILE *out)
 
 #else
 
-#ifndef OPENSSL_NO_FP_API
 void
 lh_stats(const _LHASH *lh, FILE *fp)
 {
@@ -183,7 +181,6 @@ lh_node_usage_stats(const _LHASH *lh, FILE *fp)
 end:;
 }
 
-#endif
 
 void
 lh_stats_bio(const _LHASH *lh, BIO *out)

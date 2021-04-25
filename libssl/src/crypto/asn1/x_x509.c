@@ -1,4 +1,4 @@
-/* crypto/asn1/x_x509.c */
+/* $OpenBSD: x_x509.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/evp.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1t.h>
+#include <openssl/evp.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -105,8 +107,7 @@ x509_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it, void *exarg)
 		break;
 
 	case ASN1_OP_D2I_POST:
-		if (ret->name != NULL)
-			free(ret->name);
+		free(ret->name);
 		ret->name = X509_NAME_oneline(ret->cert_info->subject, NULL, 0);
 		break;
 
@@ -123,8 +124,7 @@ x509_cb(int operation, ASN1_VALUE **pval, const ASN1_ITEM *it, void *exarg)
 		sk_IPAddressFamily_pop_free(ret->rfc3779_addr, IPAddressFamily_free);
 		ASIdentifiers_free(ret->rfc3779_asid);
 #endif
-		if (ret->name != NULL)
-			free(ret->name);
+		free(ret->name);
 		ret->name = NULL;
 		break;
 	}

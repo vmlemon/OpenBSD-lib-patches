@@ -1,4 +1,4 @@
-/* apps/x509.c */
+/* $OpenBSD: x509.c,v 1.49 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,26 +59,25 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
+
 #include "apps.h"
-#include <openssl/bio.h>
+
 #include <openssl/asn1.h>
-#include <openssl/err.h>
+#include <openssl/bio.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/x509v3.h>
 #include <openssl/objects.h>
 #include <openssl/pem.h>
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
-#ifndef OPENSSL_NO_DSA
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+
 #include <openssl/dsa.h>
-#endif
 
+#include <openssl/rsa.h>
 
-#undef POSTFIX
 #define	POSTFIX	".srl"
 #define DEF_DAYS	30
 
@@ -206,16 +205,10 @@ x509_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
+	const char *errstr = NULL;
 
 	reqfile = 0;
 
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 	STDout = BIO_new_fp(stdout, BIO_NOCLOSE);
 
 	informat = FORMAT_PEM;
@@ -265,9 +258,9 @@ x509_main(int argc, char **argv)
 		} else if (strcmp(*argv, "-days") == 0) {
 			if (--argc < 1)
 				goto bad;
-			days = atoi(*(++argv));
-			if (days == 0) {
-				BIO_printf(bio_err, "bad number of days\n");
+			days = strtonum(*(++argv), 1, INT_MAX, &errstr);
+			if (errstr) {
+				BIO_printf(bio_err, "bad number of days: %s\n", errstr);
 				goto bad;
 			}
 		} else if (strcmp(*argv, "-passin") == 0) {
@@ -409,7 +402,11 @@ x509_main(int argc, char **argv)
 		else if (strcmp(*argv, "-checkend") == 0) {
 			if (--argc < 1)
 				goto bad;
-			checkoffset = atoi(*(++argv));
+			checkoffset = strtonum(*(++argv), 0, INT_MAX, &errstr);
+			if (errstr) {
+				BIO_printf(bio_err, "checkend unusable: %s\n", errstr);
+				goto bad;
+			}
 			checkend = 1;
 		} else if (strcmp(*argv, "-noout") == 0)
 			noout = ++num;
@@ -425,13 +422,6 @@ x509_main(int argc, char **argv)
 			CA_createserial = ++num;
 		else if (strcmp(*argv, "-clrext") == 0)
 			clrext = 1;
-#if 1				/* stay backwards-compatible with 0.9.5; this
-				 * should go away soon */
-		else if (strcmp(*argv, "-crlext") == 0) {
-			BIO_printf(bio_err, "use -clrext instead of -crlext\n");
-			clrext = 1;
-		}
-#endif
 		else if (strcmp(*argv, "-ocspid") == 0)
 			ocspid = ++num;
 		else if ((md_alg = EVP_get_digestbyname(*argv + 1))) {
@@ -716,16 +706,12 @@ bad:
 					goto end;
 				}
 				BIO_printf(STDout, "Modulus=");
-#ifndef OPENSSL_NO_RSA
 				if (pkey->type == EVP_PKEY_RSA)
 					BN_print(STDout, pkey->pkey.rsa->n);
 				else
-#endif
-#ifndef OPENSSL_NO_DSA
 						if (pkey->type == EVP_PKEY_DSA)
 							BN_print(STDout, pkey->pkey.dsa->pub_key);
 				else
-#endif
 						BIO_printf(STDout, "Wrong Algorithm type");
 				BIO_printf(STDout, "\n");
 				EVP_PKEY_free(pkey);
@@ -946,9 +932,8 @@ end:
 	ASN1_INTEGER_free(sno);
 	sk_ASN1_OBJECT_pop_free(trust, ASN1_OBJECT_free);
 	sk_ASN1_OBJECT_pop_free(reject, ASN1_OBJECT_free);
-	if (passin)
-		free(passin);
-	
+	free(passin);
+
 	return (ret);
 }
 
@@ -990,9 +975,9 @@ x509_load_serial(char *CAfile, char *serialfile, int create)
 		goto end;
 
 end:
-	if (buf)
-		free(buf);
+	free(buf);
 	BN_free(serial);
+
 	return bs;
 }
 

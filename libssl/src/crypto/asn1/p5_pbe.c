@@ -1,4 +1,4 @@
-/* p5_pbe.c */
+/* $OpenBSD: p5_pbe.c,v 1.16 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -57,10 +57,12 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1t.h>
-#include <openssl/x509.h>
+#include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/x509.h>
 
 /* PKCS#5 password based encryption structure */
 
@@ -119,8 +121,7 @@ PKCS5_pbe_set0_algor(X509_ALGOR *algor, int alg, int iter,
 err:
 	if (pbe != NULL)
 		PBEPARAM_free(pbe);
-	if (pbe_str != NULL)
-		ASN1_STRING_free(pbe_str);
+	ASN1_STRING_free(pbe_str);
 	return 0;
 }
 

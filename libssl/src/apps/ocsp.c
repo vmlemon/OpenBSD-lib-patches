@@ -1,4 +1,4 @@
-/* ocsp.c */
+/* $OpenBSD: ocsp.c,v 1.30 2014/07/13 16:03:09 beck Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2000.
  */
@@ -59,16 +59,18 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <time.h>
-#include "apps.h"		/* needs to be included before the openssl
-				 * headers! */
-#include <openssl/e_os2.h>
+
+/* Needs to be included before the openssl headers! */
+#include "apps.h"
+
+#include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
-#include <openssl/ssl.h>
 #include <openssl/evp.h>
-#include <openssl/bn.h>
+#include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
 /* Maximum leeway in validity period: default 5 minutes */
@@ -137,21 +139,14 @@ ocsp_main(int argc, char **argv)
 	int ignore_err = 0;
 	STACK_OF(OPENSSL_STRING) * reqnames = NULL;
 	STACK_OF(OCSP_CERTID) * ids = NULL;
-
 	X509 *rca_cert = NULL;
 	char *ridx_filename = NULL;
 	char *rca_filename = NULL;
 	CA_DB *rdb = NULL;
 	int nmin = 0, ndays = -1;
 	const EVP_MD *cert_id_md = NULL;
+	const char *errstr = NULL;
 
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
-	SSL_load_error_strings();
-	OpenSSL_add_ssl_algorithms();
 	args = argv + 1;
 	reqnames = sk_OPENSSL_STRING_new_null();
 	ids = sk_OCSP_CERTID_new_null();
@@ -165,11 +160,12 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-timeout")) {
 			if (args[1]) {
 				args++;
-				req_timeout = atol(*args);
-				if (req_timeout < 0) {
+				req_timeout = strtonum(*args, 0,
+				    INT_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal timeout value %s\n",
-					    *args);
+					    "Illegal timeout value %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			} else
@@ -289,11 +285,11 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-validity_period")) {
 			if (args[1]) {
 				args++;
-				nsec = atol(*args);
-				if (nsec < 0) {
+				nsec = strtonum(*args, 0, LONG_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal validity period %s\n",
-					    *args);
+					    "Illegal validity period %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			} else
@@ -301,11 +297,11 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-status_age")) {
 			if (args[1]) {
 				args++;
-				maxage = atol(*args);
-				if (maxage < 0) {
+				maxage = strtonum(*args, 0, LONG_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal validity age %s\n",
-					    *args);
+					    "Illegal validity age %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			} else
@@ -386,11 +382,11 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-nmin")) {
 			if (args[1]) {
 				args++;
-				nmin = atol(*args);
-				if (nmin < 0) {
+				nmin = strtonum(*args, 0, INT_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal update period %s\n",
-					    *args);
+					    "Illegal update period %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			}
@@ -401,11 +397,11 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-nrequest")) {
 			if (args[1]) {
 				args++;
-				accept_count = atol(*args);
-				if (accept_count < 0) {
+				accept_count = strtonum(*args, 0, INT_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal accept count %s\n",
-					    *args);
+					    "Illegal accept count %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			} else
@@ -413,11 +409,11 @@ ocsp_main(int argc, char **argv)
 		} else if (!strcmp(*args, "-ndays")) {
 			if (args[1]) {
 				args++;
-				ndays = atol(*args);
-				if (ndays < 0) {
+				ndays = strtonum(*args, 0, INT_MAX, &errstr);
+				if (errstr) {
 					BIO_printf(bio_err,
-					    "Illegal update period %s\n",
-					    *args);
+					    "Illegal update period %s: %s\n",
+					    *args, errstr);
 					badarg = 1;
 				}
 			} else
@@ -627,15 +623,10 @@ redo_accept:
 		if (cbio)
 			send_ocsp_response(cbio, resp);
 	} else if (host) {
-#ifndef OPENSSL_NO_SOCK
 		resp = process_responder(bio_err, req, host, path,
 		    port, use_ssl, headers, req_timeout);
 		if (!resp)
 			goto end;
-#else
-		BIO_printf(bio_err, "Error creating connect BIO - sockets not supported.\n");
-		goto end;
-#endif
 	} else if (respin) {
 		derbio = BIO_new_file(respin, "rb");
 		if (!derbio) {
@@ -1000,7 +991,7 @@ lookup_serial(CA_DB * db, ASN1_INTEGER * ser)
 	OPENSSL_assert(bn);	/* FIXME: should report an error at this
 				 * point and abort */
 	if (BN_is_zero(bn))
-		itmp = BUF_strdup("00");
+		itmp = strdup("00");
 	else
 		itmp = BN_bn2hex(bn);
 	row[DB_serial] = itmp;
@@ -1019,11 +1010,7 @@ init_responder(char *port)
 	bufbio = BIO_new(BIO_f_buffer());
 	if (!bufbio)
 		goto err;
-#ifndef OPENSSL_NO_SOCK
 	acbio = BIO_new_accept(port);
-#else
-	BIO_printf(bio_err, "Error setting up accept BIO - sockets not supported.\n");
-#endif
 	if (!acbio)
 		goto err;
 	BIO_set_accept_bios(acbio, bufbio);

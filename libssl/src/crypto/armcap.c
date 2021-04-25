@@ -1,3 +1,4 @@
+/* $OpenBSD: armcap.c,v 1.6 2014/06/20 21:00:46 deraadt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +10,7 @@
 
 unsigned int OPENSSL_armcap_P;
 
+#if __ARM_ARCH__ >= 7
 static sigset_t all_masked;
 
 static sigjmp_buf ill_jmp;
@@ -20,6 +22,7 @@ static sigjmp_buf ill_jmp;
  * ARM compilers support inline assembler...
  */
 void _armv7_neon_probe(void);
+#endif
 
 #if defined(__GNUC__) && __GNUC__>=2
 void OPENSSL_cpuid_setup(void) __attribute__((constructor));
@@ -28,28 +31,28 @@ void OPENSSL_cpuid_setup(void) __attribute__((constructor));
 void
 OPENSSL_cpuid_setup(void)
 {
+#ifndef __OpenBSD__
 	char *e;
+#endif
+#if __ARM_ARCH__ >= 7
 	struct sigaction	ill_oact, ill_act;
 	sigset_t		oset;
+#endif
 	static int trigger = 0;
 
 	if (trigger)
 		return;
 	trigger = 1;
 
-	if ((e = getenv("OPENSSL_armcap"))) {
-		OPENSSL_armcap_P = strtoul(e, NULL, 0);
-		return;
-	}
+	OPENSSL_armcap_P = 0;
 
+#if __ARM_ARCH__ >= 7
 	sigfillset(&all_masked);
 	sigdelset(&all_masked, SIGILL);
 	sigdelset(&all_masked, SIGTRAP);
 	sigdelset(&all_masked, SIGFPE);
 	sigdelset(&all_masked, SIGBUS);
 	sigdelset(&all_masked, SIGSEGV);
-
-	OPENSSL_armcap_P = 0;
 
 	memset(&ill_act, 0, sizeof(ill_act));
 	ill_act.sa_handler = ill_handler;
@@ -65,4 +68,5 @@ OPENSSL_cpuid_setup(void)
 
 	sigaction (SIGILL, &ill_oact, NULL);
 	sigprocmask(SIG_SETMASK, &oset, NULL);
+#endif
 }

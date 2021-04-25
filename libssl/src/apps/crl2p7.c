@@ -1,4 +1,4 @@
-/* apps/crl2p7.c */
+/* $OpenBSD: crl2p7.c,v 1.20 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -60,16 +60,19 @@
  * and donated 'to the cause' along with lots and lots of other fixes to
  * the library. */
 
+#include <sys/types.h>
+
 #include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
+
 #include "apps.h"
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
-#include <openssl/pkcs7.h>
-#include <openssl/pem.h>
 #include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/pkcs7.h>
+#include <openssl/x509.h>
 
 static int add_certs_from_file(STACK_OF(X509) * stack, char *certfile);
 
@@ -95,12 +98,6 @@ crl2pkcs7_main(int argc, char **argv)
 	STACK_OF(X509_CRL) * crl_stack = NULL;
 	STACK_OF(X509) * cert_stack = NULL;
 	int ret = 1, nocrl = 0;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
 
 	infile = NULL;
 	outfile = NULL;
@@ -260,7 +257,7 @@ end:
 	if (crl != NULL)
 		X509_CRL_free(crl);
 
-	
+
 	return (ret);
 }
 

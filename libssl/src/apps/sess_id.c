@@ -1,4 +1,4 @@
-/* apps/sess_id.c */
+/* $OpenBSD: sess_id.c,v 1.19 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,13 +59,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <openssl/ssl.h>
-
+#include <openssl/x509.h>
 
 static const char *sess_id_usage[] = {
 	"usage: sess_id args\n",
@@ -76,7 +77,7 @@ static const char *sess_id_usage[] = {
 	" -out arg        - output file - default stdout\n",
 	" -text           - print ssl session id details\n",
 	" -cert           - output certificate \n",
-	" -noout          - no CRL output\n",
+	" -noout          - no output of encoded session info\n",
 	" -context arg    - set the session ID context\n",
 	NULL
 };
@@ -85,7 +86,7 @@ static SSL_SESSION *load_sess_id(char *file, int format);
 
 int sess_id_main(int, char **);
 
-int 
+int
 sess_id_main(int argc, char **argv)
 {
 	SSL_SESSION *x = NULL;
@@ -96,12 +97,6 @@ sess_id_main(int argc, char **argv)
 	char *infile = NULL, *outfile = NULL, *context = NULL;
 	int cert = 0, noout = 0, text = 0;
 	const char **pp;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
 
 	informat = FORMAT_PEM;
 	outformat = FORMAT_PEM;
@@ -245,7 +240,7 @@ end:
 		BIO_free_all(out);
 	if (x != NULL)
 		SSL_SESSION_free(x);
-	
+
 	return (ret);
 }
 

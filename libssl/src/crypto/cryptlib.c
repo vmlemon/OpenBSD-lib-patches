@@ -1,4 +1,4 @@
-/* crypto/cryptlib.c */
+/* $OpenBSD: cryptlib.c,v 1.32 2014/07/11 08:44:47 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2006 The OpenSSL Project.  All rights reserved.
  *
@@ -114,7 +114,15 @@
  * SUN MICROSYSTEMS, INC., and contributed to the OpenSSL project.
  */
 
-#include "cryptlib.h"
+#include <stdarg.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <openssl/opensslconf.h>
+
+#include <openssl/crypto.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 #include <openssl/safestack.h>
 
 DECLARE_STACK_OF(CRYPTO_dynlock)
@@ -653,20 +661,12 @@ OPENSSL_cpuid_setup(void)
 	static int trigger = 0;
 	IA32CAP OPENSSL_ia32_cpuid(void);
 	IA32CAP vec;
-	char *env;
 
 	if (trigger)
 		return;
-
 	trigger = 1;
-	if ((env = getenv("OPENSSL_ia32cap"))) {
-		int off = (env[0] == '~') ? 1 : 0;
-		if (!sscanf(env+off, "%lli",(long long *)&vec))
-			vec = strtoul(env + off, NULL, 0);
-		if (off)
-			vec = OPENSSL_ia32_cpuid() & ~vec;
-	} else
-		vec = OPENSSL_ia32_cpuid();
+
+	vec = OPENSSL_ia32_cpuid();
 
 	/*
 	 * |(1<<10) sets a reserved bit to signal that variable
@@ -685,7 +685,6 @@ OPENSSL_ia32cap_loc(void)
 	return NULL;
 }
 #endif
-int OPENSSL_NONPIC_relocated = 0;
 
 #if !defined(OPENSSL_CPUID_SETUP) && !defined(OPENSSL_CPUID_OBJ)
 void
@@ -694,21 +693,14 @@ OPENSSL_cpuid_setup(void)
 }
 #endif
 
-
-void
+static void
 OPENSSL_showfatal(const char *fmta, ...)
 {
 	va_list ap;
 
-	va_start (ap, fmta);
-	vfprintf (stderr, fmta, ap);
-	va_end (ap);
-}
-
-int
-OPENSSL_isservice(void)
-{
-	return 0;
+	va_start(ap, fmta);
+	vfprintf(stderr, fmta, ap);
+	va_end(ap);
 }
 
 void
@@ -718,12 +710,6 @@ OpenSSLDie(const char *file, int line, const char *assertion)
 	    "%s(%d): OpenSSL internal error, assertion failed: %s\n",
 	    file, line, assertion);
 	abort();
-}
-
-void *
-OPENSSL_stderr(void)
-{
-	return stderr;
 }
 
 int

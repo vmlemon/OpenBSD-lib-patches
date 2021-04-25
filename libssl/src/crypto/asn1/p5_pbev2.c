@@ -1,4 +1,4 @@
-/* p5_pbev2.c */
+/* $OpenBSD: p5_pbev2.c,v 1.17 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999-2004.
  */
@@ -57,10 +57,12 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1t.h>
-#include <openssl/x509.h>
+#include <openssl/err.h>
 #include <openssl/rand.h>
+#include <openssl/x509.h>
 
 /* PKCS#5 v2.0 password based encryption structures */
 

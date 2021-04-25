@@ -1,4 +1,4 @@
-#	$OpenBSD: Makefile.inc,v 1.117 2014/03/18 22:36:30 miod Exp $
+#	$OpenBSD: Makefile.inc,v 1.119 2014/07/12 02:28:56 deraadt Exp $
 #	$NetBSD: Makefile.inc,v 1.35 1995/10/16 23:49:07 jtc Exp $
 #	@(#)Makefile.inc	8.1 (Berkeley) 6/17/93
 
@@ -33,7 +33,7 @@ ASM=	__get_tcb.o __getcwd.o __semctl.o __set_tcb.o __syscall.o \
 	fchdir.o fchflags.o fchmod.o fchmodat.o fchown.o \
 	fchownat.o fcntl.o fhopen.o fhstat.o fhstatfs.o \
 	flock.o fpathconf.o fstat.o fstatat.o fstatfs.o \
-	fsync.o futimens.o futimes.o getdents.o getdtablecount.o \
+	fsync.o futimens.o futimes.o getentropy.o getdents.o getdtablecount.o \
 	getegid.o geteuid.o getfh.o getfsstat.o getgid.o \
 	getgroups.o getitimer.o getpeername.o getpgid.o getpgrp.o \
 	getpid.o getppid.o getpriority.o getresgid.o getresuid.o \
@@ -48,7 +48,7 @@ ASM=	__get_tcb.o __getcwd.o __semctl.o __set_tcb.o __syscall.o \
 	open.o openat.o pathconf.o pipe.o poll.o ppoll.o profil.o pselect.o \
 	quotactl.o read.o readlink.o readlinkat.o readv.o reboot.o \
 	recvfrom.o recvmsg.o rename.o renameat.o revoke.o rmdir.o \
-	sched_yield.o select.o semget.o semop.o sendmsg.o sendto.o \
+	sched_yield.o select.o semget.o semop.o sendmsg.o sendsyslog.o sendto.o \
 	setegid.o seteuid.o setgid.o setgroups.o setitimer.o \
 	setpgid.o setpriority.o setregid.o setresgid.o setresuid.o \
 	setreuid.o setrlimit.o setrtable.o setsid.o setsockopt.o \
@@ -200,10 +200,10 @@ MAN+=	__get_tcb.2 __thrsigdivert.2 __thrsleep.2 _exit.2 accept.2 \
 	access.2 acct.2 adjfreq.2 adjtime.2 bind.2 brk.2 chdir.2 \
 	chflags.2 chmod.2 chown.2 chroot.2 clock_gettime.2 close.2 \
 	closefrom.2 connect.2 dup.2 execve.2 fcntl.2 fhopen.2 flock.2 \
-	fork.2 fsync.2 getdents.2 getdtablecount.2 getfh.2 getfsstat.2 \
-	getgid.2 getgroups.2 getitimer.2 getlogin.2 getpeername.2 \
-	getpgrp.2 getpid.2 getpriority.2 getrlimit.2 getrtable.2 \
-	getrusage.2 getsid.2 getsockname.2 getsockopt.2 \
+	fork.2 fsync.2 getentropy.2 getdents.2 getdtablecount.2 \
+	getfh.2 getfsstat.2 getgid.2 getgroups.2 getitimer.2 getlogin.2 \
+	getpeername.2 getpgrp.2 getpid.2 getpriority.2 getrlimit.2 \
+	getrtable.2 getrusage.2 getsid.2 getsockname.2 getsockopt.2 \
 	gettimeofday.2 getuid.2 intro.2 ioctl.2 issetugid.2 \
 	kill.2 kqueue.2 ktrace.2 link.2 listen.2 lseek.2 madvise.2 \
 	mincore.2 minherit.2 mkdir.2 mkfifo.2 mknod.2 mlock.2 \
@@ -213,8 +213,8 @@ MAN+=	__get_tcb.2 __thrsigdivert.2 __thrsleep.2 _exit.2 accept.2 \
 	ptrace.2 quotactl.2 read.2 readlink.2 reboot.2 recv.2 \
 	rename.2 revoke.2 rmdir.2 select.2 semctl.2 semget.2 \
 	semop.2 send.2 setgroups.2 setpgid.2 setregid.2 \
-	setresuid.2 setreuid.2 setsid.2 setuid.2 shmat.2 shmctl.2 \
-	shmget.2 shutdown.2 sigaction.2 sigaltstack.2 sigpending.2 \
+	setresuid.2 setreuid.2 setsid.2 sendsyslog.2 setuid.2 shmat.2 \
+	shmctl.2 shmget.2 shutdown.2 sigaction.2 sigaltstack.2 sigpending.2 \
 	sigprocmask.2 sigreturn.2 sigsuspend.2 socket.2 \
 	socketpair.2 stat.2 statfs.2 swapctl.2 symlink.2 \
 	sync.2 sysarch.2 syscall.2 truncate.2 umask.2 unlink.2 \

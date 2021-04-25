@@ -1,4 +1,4 @@
-/* crypto/lhash/lhash.c */
+/* $OpenBSD: lhash.c,v 1.17 2014/07/10 22:45:57 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -97,10 +97,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/crypto.h>
 #include <openssl/lhash.h>
-
-const char lh_version[] = "lhash" OPENSSL_VERSION_PTEXT;
 
 #undef MIN_NODES
 #define MIN_NODES	16
@@ -119,7 +120,7 @@ lh_new(LHASH_HASH_FN_TYPE h, LHASH_COMP_FN_TYPE c)
 
 	if ((ret = malloc(sizeof(_LHASH))) == NULL)
 		goto err0;
-	if ((ret->b = malloc(sizeof(LHASH_NODE *) * MIN_NODES)) == NULL)
+	if ((ret->b = reallocarray(NULL, MIN_NODES, sizeof(LHASH_NODE *))) == NULL)
 		goto err1;
 	for (i = 0; i < MIN_NODES; i++)
 		ret->b[i] = NULL;
@@ -191,7 +192,7 @@ lh_insert(_LHASH *lh, void *data)
 	rn = getrn(lh, data, &hash);
 
 	if (*rn == NULL) {
-		if ((nn = (LHASH_NODE *)malloc(sizeof(LHASH_NODE))) == NULL) {
+		if ((nn = malloc(sizeof(LHASH_NODE))) == NULL) {
 			lh->error++;
 			return (NULL);
 		}
@@ -337,8 +338,7 @@ expand(_LHASH *lh)
 
 	if ((lh->p) >= lh->pmax) {
 		j = (int)lh->num_alloc_nodes * 2;
-		n = (LHASH_NODE **)realloc(lh->b,
-		    (int)(sizeof(LHASH_NODE *) * j));
+		n = reallocarray(lh->b, j, sizeof(LHASH_NODE *));
 		if (n == NULL) {
 /*			fputs("realloc error in lhash", stderr); */
 			lh->error++;
@@ -364,8 +364,7 @@ contract(_LHASH *lh)
 	np = lh->b[lh->p + lh->pmax - 1];
 	lh->b[lh->p+lh->pmax - 1] = NULL; /* 24/07-92 - eay - weird but :-( */
 	if (lh->p == 0) {
-		n = (LHASH_NODE **)realloc(lh->b,
-		    (unsigned int)(sizeof(LHASH_NODE *) * lh->pmax));
+		n = reallocarray(lh->b, lh->pmax, sizeof(LHASH_NODE *));
 		if (n == NULL) {
 /*			fputs("realloc error in lhash", stderr); */
 			lh->error++;

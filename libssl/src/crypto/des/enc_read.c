@@ -1,4 +1,4 @@
-/* crypto/des/enc_read.c */
+/* $OpenBSD: enc_read.c,v 1.14 2014/07/11 08:44:48 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,15 +56,16 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
 #include <errno.h>
-#include "cryptlib.h"
+#include <stdio.h>
+
+#include <openssl/opensslconf.h>
+
 #include "des_locl.h"
 
 /* This has some uglies in it but it works - even over sockets. */
 /*extern int errno;*/
-OPENSSL_IMPLEMENT_GLOBAL(int,DES_rw_mode,DES_PCBC_MODE)
-
+int DES_rw_mode = DES_PCBC_MODE;
 
 /*
  * WARNINGS:

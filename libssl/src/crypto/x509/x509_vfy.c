@@ -1,4 +1,4 @@
-/* crypto/x509/x509_vfy.c */
+/* $OpenBSD: x509_vfy.c,v 1.36 2014/07/12 17:35:23 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,19 +56,24 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
-#include <time.h>
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "cryptlib.h"
-#include <openssl/crypto.h>
-#include <openssl/lhash.h>
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1.h>
+#include <openssl/buffer.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/lhash.h>
+#include <openssl/objects.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
-#include <openssl/objects.h>
+#include "x509_lcl.h"
 
 /* CRL score values */
 
@@ -133,8 +138,6 @@ static int check_crl_chain(X509_STORE_CTX *ctx, STACK_OF(X509) *cert_path,
     STACK_OF(X509) *crl_path);
 
 static int internal_verify(X509_STORE_CTX *ctx);
-const char X509_version[]="X.509" OPENSSL_VERSION_PTEXT;
-
 
 static int
 null_callback(int ok, X509_STORE_CTX *e)
@@ -313,7 +316,11 @@ X509_verify_cert(X509_STORE_CTX *ctx)
 			ctx->current_cert = x;
 		} else {
 
-			sk_X509_push(ctx->chain, chain_ss);
+			if (!sk_X509_push(ctx->chain, chain_ss)) {
+				X509_free(chain_ss);
+				X509err(X509_F_X509_VERIFY_CERT, ERR_R_MALLOC_FAILURE);
+				return 0;
+			}
 			num++;
 			ctx->last_untrusted = num;
 			ctx->current_cert = chain_ss;
@@ -402,14 +409,17 @@ static X509 *
 find_issuer(X509_STORE_CTX *ctx, STACK_OF(X509) *sk, X509 *x)
 {
 	int i;
-	X509 *issuer;
+	X509 *issuer, *rv = NULL;
 
 	for (i = 0; i < sk_X509_num(sk); i++) {
 		issuer = sk_X509_value(sk, i);
-		if (ctx->check_issued(ctx, x, issuer))
-			return issuer;
+		if (ctx->check_issued(ctx, x, issuer)) {
+			rv = issuer;
+			if (x509_check_cert_time(ctx, rv, 1))
+				break;
+		}
 	}
-	return NULL;
+	return rv;
 }
 
 /* Given a possible certificate and issuer check them */
@@ -481,10 +491,12 @@ check_chain_extensions(X509_STORE_CTX *ctx)
 	} else {
 		allow_proxy_certs =
 		    !!(ctx->param->flags & X509_V_FLAG_ALLOW_PROXY_CERTS);
+#if 0
 		/* A hack to keep people who don't want to modify their
 		   software happy */
-		if (getenv("OPENSSL_ALLOW_PROXY_CERTS"))
+		if (issetugid() == 0 && getenv("OPENSSL_ALLOW_PROXY_CERTS"))
 			allow_proxy_certs = 1;
+#endif
 		purpose = ctx->param->purpose;
 	}
 
@@ -1486,8 +1498,8 @@ check_policy(X509_STORE_CTX *ctx)
 	return 1;
 }
 
-static int
-check_cert_time(X509_STORE_CTX *ctx, X509 *x)
+int
+x509_check_cert_time(X509_STORE_CTX *ctx, X509 *x, int quiet)
 {
 	time_t *ptime;
 	int i;
@@ -1499,6 +1511,8 @@ check_cert_time(X509_STORE_CTX *ctx, X509 *x)
 
 	i = X509_cmp_time(X509_get_notBefore(x), ptime);
 	if (i == 0) {
+		if (quiet)
+			return 0;
 		ctx->error = X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD;
 		ctx->current_cert = x;
 		if (!ctx->verify_cb(0, ctx))
@@ -1506,6 +1520,8 @@ check_cert_time(X509_STORE_CTX *ctx, X509 *x)
 	}
 
 	if (i > 0) {
+		if (quiet)
+			return 0;
 		ctx->error = X509_V_ERR_CERT_NOT_YET_VALID;
 		ctx->current_cert = x;
 		if (!ctx->verify_cb(0, ctx))
@@ -1514,6 +1530,8 @@ check_cert_time(X509_STORE_CTX *ctx, X509 *x)
 
 	i = X509_cmp_time(X509_get_notAfter(x), ptime);
 	if (i == 0) {
+		if (quiet)
+			return 0;
 		ctx->error = X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD;
 		ctx->current_cert = x;
 		if (!ctx->verify_cb(0, ctx))
@@ -1521,6 +1539,8 @@ check_cert_time(X509_STORE_CTX *ctx, X509 *x)
 	}
 
 	if (i < 0) {
+		if (quiet)
+			return 0;
 		ctx->error = X509_V_ERR_CERT_HAS_EXPIRED;
 		ctx->current_cert = x;
 		if (!ctx->verify_cb(0, ctx))
@@ -1591,7 +1611,7 @@ internal_verify(X509_STORE_CTX *ctx)
 
 		xs->valid = 1;
 
-		ok = check_cert_time(ctx, xs);
+		ok = x509_check_cert_time(ctx, xs, 0);
 		if (!ok)
 			goto end;
 
@@ -1950,18 +1970,20 @@ X509_STORE_CTX_new(void)
 {
 	X509_STORE_CTX *ctx;
 
-	ctx = (X509_STORE_CTX *)malloc(sizeof(X509_STORE_CTX));
+	ctx = calloc(1, sizeof(X509_STORE_CTX));
 	if (!ctx) {
 		X509err(X509_F_X509_STORE_CTX_NEW, ERR_R_MALLOC_FAILURE);
 		return NULL;
 	}
-	memset(ctx, 0, sizeof(X509_STORE_CTX));
 	return ctx;
 }
 
 void
 X509_STORE_CTX_free(X509_STORE_CTX *ctx)
 {
+	if (ctx == NULL)
+		return;
+
 	X509_STORE_CTX_cleanup(ctx);
 	free(ctx);
 }

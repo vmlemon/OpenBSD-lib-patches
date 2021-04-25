@@ -1,4 +1,4 @@
-/* ssl/ssl_rsa.c */
+/* $OpenBSD: ssl_rsa.c,v 1.16 2014/07/12 16:03:37 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -80,7 +80,6 @@ SSL_use_certificate(SSL *ssl, X509 *x)
 	return (ssl_set_cert(ssl->cert, x));
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_use_certificate_file(SSL *ssl, const char *file, int type)
 {
@@ -104,7 +103,9 @@ SSL_use_certificate_file(SSL *ssl, const char *file, int type)
 		x = d2i_X509_bio(in, NULL);
 	} else if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
-		x = PEM_read_bio_X509(in, NULL, ssl->ctx->default_passwd_callback, ssl->ctx->default_passwd_callback_userdata);
+		x = PEM_read_bio_X509(in, NULL,
+		    ssl->ctx->default_passwd_callback,
+		    ssl->ctx->default_passwd_callback_userdata);
 	} else {
 		SSLerr(SSL_F_SSL_USE_CERTIFICATE_FILE, SSL_R_BAD_SSL_FILETYPE);
 		goto end;
@@ -119,11 +120,9 @@ SSL_use_certificate_file(SSL *ssl, const char *file, int type)
 end:
 	if (x != NULL)
 		X509_free(x);
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_use_certificate_ASN1(SSL *ssl, const unsigned char *d, int len)
@@ -187,8 +186,10 @@ ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 		EVP_PKEY_free(pktmp);
 		ERR_clear_error();
 
-		/* Don't check the public/private key, this is mostly
-		 * for smart cards. */
+		/*
+		 * Don't check the public/private key, this is mostly
+		 * for smart cards.
+		 */
 		if ((pkey->type == EVP_PKEY_RSA) &&
 			(RSA_flags(pkey->pkey.rsa) & RSA_METHOD_FLAG_NO_CHECK))
 ;
@@ -200,8 +201,7 @@ ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 		}
 	}
 
-	if (c->pkeys[i].privatekey != NULL)
-		EVP_PKEY_free(c->pkeys[i].privatekey);
+	EVP_PKEY_free(c->pkeys[i].privatekey);
 	CRYPTO_add(&pkey->references, 1, CRYPTO_LOCK_EVP_PKEY);
 	c->pkeys[i].privatekey = pkey;
 	c->key = &(c->pkeys[i]);
@@ -210,7 +210,6 @@ ssl_set_pkey(CERT *c, EVP_PKEY *pkey)
 	return (1);
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type)
 {
@@ -234,7 +233,8 @@ SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type)
 	} else if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
 		rsa = PEM_read_bio_RSAPrivateKey(in, NULL,
-		ssl->ctx->default_passwd_callback, ssl->ctx->default_passwd_callback_userdata);
+		    ssl->ctx->default_passwd_callback,
+		    ssl->ctx->default_passwd_callback_userdata);
 	} else {
 		SSLerr(SSL_F_SSL_USE_RSAPRIVATEKEY_FILE, SSL_R_BAD_SSL_FILETYPE);
 		goto end;
@@ -246,11 +246,9 @@ SSL_use_RSAPrivateKey_file(SSL *ssl, const char *file, int type)
 	ret = SSL_use_RSAPrivateKey(ssl, rsa);
 	RSA_free(rsa);
 end:
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_use_RSAPrivateKey_ASN1(SSL *ssl, unsigned char *d, long len)
@@ -287,7 +285,6 @@ SSL_use_PrivateKey(SSL *ssl, EVP_PKEY *pkey)
 	return (ret);
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_use_PrivateKey_file(SSL *ssl, const char *file, int type)
 {
@@ -308,7 +305,8 @@ SSL_use_PrivateKey_file(SSL *ssl, const char *file, int type)
 	if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
 		pkey = PEM_read_bio_PrivateKey(in, NULL,
-		ssl->ctx->default_passwd_callback, ssl->ctx->default_passwd_callback_userdata);
+		    ssl->ctx->default_passwd_callback,
+		    ssl->ctx->default_passwd_callback_userdata);
 	} else if (type == SSL_FILETYPE_ASN1) {
 		j = ERR_R_ASN1_LIB;
 		pkey = d2i_PrivateKey_bio(in, NULL);
@@ -323,11 +321,9 @@ SSL_use_PrivateKey_file(SSL *ssl, const char *file, int type)
 	ret = SSL_use_PrivateKey(ssl, pkey);
 	EVP_PKEY_free(pkey);
 end:
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_use_PrivateKey_ASN1(int type, SSL *ssl, const unsigned char *d, long len)
@@ -384,18 +380,22 @@ ssl_set_cert(CERT *c, X509 *x)
 		EVP_PKEY_copy_parameters(pkey, c->pkeys[i].privatekey);
 		ERR_clear_error();
 
-		/* Don't check the public/private key, this is mostly
-		 * for smart cards. */
+		/*
+		 * Don't check the public/private key, this is mostly
+		 * for smart cards.
+		 */
 		if ((c->pkeys[i].privatekey->type == EVP_PKEY_RSA) &&
 			(RSA_flags(c->pkeys[i].privatekey->pkey.rsa) &
 		RSA_METHOD_FLAG_NO_CHECK))
 ;
 		else
 		if (!X509_check_private_key(x, c->pkeys[i].privatekey)) {
-			/* don't fail for a cert/key mismatch, just free
+			/*
+			 * don't fail for a cert/key mismatch, just free
 			 * current private key (when switching to a different
 			 * cert & key, first this function should be used,
-			 * then ssl_set_pkey */
+			 * then ssl_set_pkey
+			 */
 			EVP_PKEY_free(c->pkeys[i].privatekey);
 			c->pkeys[i].privatekey = NULL;
 			/* clear error queue */
@@ -415,7 +415,6 @@ ssl_set_cert(CERT *c, X509 *x)
 	return (1);
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
 {
@@ -439,7 +438,8 @@ SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
 		x = d2i_X509_bio(in, NULL);
 	} else if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
-		x = PEM_read_bio_X509(in, NULL, ctx->default_passwd_callback, ctx->default_passwd_callback_userdata);
+		x = PEM_read_bio_X509(in, NULL, ctx->default_passwd_callback,
+		    ctx->default_passwd_callback_userdata);
 	} else {
 		SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_FILE, SSL_R_BAD_SSL_FILETYPE);
 		goto end;
@@ -454,11 +454,9 @@ SSL_CTX_use_certificate_file(SSL_CTX *ctx, const char *file, int type)
 end:
 	if (x != NULL)
 		X509_free(x);
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_CTX_use_certificate_ASN1(SSL_CTX *ctx, int len, const unsigned char *d)
@@ -504,7 +502,6 @@ SSL_CTX_use_RSAPrivateKey(SSL_CTX *ctx, RSA *rsa)
 	return (ret);
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 {
@@ -528,7 +525,8 @@ SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	} else if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
 		rsa = PEM_read_bio_RSAPrivateKey(in, NULL,
-		ctx->default_passwd_callback, ctx->default_passwd_callback_userdata);
+		    ctx->default_passwd_callback,
+		    ctx->default_passwd_callback_userdata);
 	} else {
 		SSLerr(SSL_F_SSL_CTX_USE_RSAPRIVATEKEY_FILE, SSL_R_BAD_SSL_FILETYPE);
 		goto end;
@@ -540,11 +538,9 @@ SSL_CTX_use_RSAPrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	ret = SSL_CTX_use_RSAPrivateKey(ctx, rsa);
 	RSA_free(rsa);
 end:
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_CTX_use_RSAPrivateKey_ASN1(SSL_CTX *ctx, const unsigned char *d, long len)
@@ -568,7 +564,8 @@ int
 SSL_CTX_use_PrivateKey(SSL_CTX *ctx, EVP_PKEY *pkey)
 {
 	if (pkey == NULL) {
-		SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY, ERR_R_PASSED_NULL_PARAMETER);
+		SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY,
+		    ERR_R_PASSED_NULL_PARAMETER);
 		return (0);
 	}
 	if (!ssl_cert_inst(&ctx->cert)) {
@@ -578,7 +575,6 @@ SSL_CTX_use_PrivateKey(SSL_CTX *ctx, EVP_PKEY *pkey)
 	return (ssl_set_pkey(ctx->cert, pkey));
 }
 
-#ifndef OPENSSL_NO_STDIO
 int
 SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 {
@@ -599,12 +595,14 @@ SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	if (type == SSL_FILETYPE_PEM) {
 		j = ERR_R_PEM_LIB;
 		pkey = PEM_read_bio_PrivateKey(in, NULL,
-		ctx->default_passwd_callback, ctx->default_passwd_callback_userdata);
+		    ctx->default_passwd_callback,
+		    ctx->default_passwd_callback_userdata);
 	} else if (type == SSL_FILETYPE_ASN1) {
 		j = ERR_R_ASN1_LIB;
 		pkey = d2i_PrivateKey_bio(in, NULL);
 	} else {
-		SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE, SSL_R_BAD_SSL_FILETYPE);
+		SSLerr(SSL_F_SSL_CTX_USE_PRIVATEKEY_FILE,
+		    SSL_R_BAD_SSL_FILETYPE);
 		goto end;
 	}
 	if (pkey == NULL) {
@@ -614,11 +612,9 @@ SSL_CTX_use_PrivateKey_file(SSL_CTX *ctx, const char *file, int type)
 	ret = SSL_CTX_use_PrivateKey(ctx, pkey);
 	EVP_PKEY_free(pkey);
 end:
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif
 
 int
 SSL_CTX_use_PrivateKey_ASN1(int type, SSL_CTX *ctx, const unsigned char *d,
@@ -640,8 +636,8 @@ SSL_CTX_use_PrivateKey_ASN1(int type, SSL_CTX *ctx, const unsigned char *d,
 }
 
 
-#ifndef OPENSSL_NO_STDIO
-/* Read a file that contains our certificate in "PEM" format,
+/*
+ * Read a file that contains our certificate in "PEM" format,
  * possibly followed by a sequence of CA certificates that should be
  * sent to the peer in the Certificate message.
  */
@@ -666,7 +662,7 @@ SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
 	}
 
 	x = PEM_read_bio_X509_AUX(in, NULL, ctx->default_passwd_callback,
-	ctx->default_passwd_callback_userdata);
+	    ctx->default_passwd_callback_userdata);
 	if (x == NULL) {
 		SSLerr(SSL_F_SSL_CTX_USE_CERTIFICATE_CHAIN_FILE, ERR_R_PEM_LIB);
 		goto end;
@@ -678,7 +674,8 @@ SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
 		ret = 0;
 	/* Key/certificate mismatch doesn't imply ret==0 ... */
 	if (ret) {
-		/* If we could set up our certificate, now proceed to
+		/*
+		 * If we could set up our certificate, now proceed to
 		 * the CA certificates.
 		 */
 		X509 *ca;
@@ -691,23 +688,26 @@ SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
 		}
 
 		while ((ca = PEM_read_bio_X509(in, NULL,
-		ctx->default_passwd_callback,
-		ctx->default_passwd_callback_userdata))
-		!= NULL) {
+		    ctx->default_passwd_callback,
+		    ctx->default_passwd_callback_userdata)) != NULL) {
 			r = SSL_CTX_add_extra_chain_cert(ctx, ca);
 			if (!r) {
 				X509_free(ca);
 				ret = 0;
 				goto end;
 			}
-			/* Note that we must not free r if it was successfully
+			/*
+			 * Note that we must not free r if it was successfully
 			 * added to the chain (while we must free the main
 			 * certificate, since its reference count is increased
-			 * by SSL_CTX_use_certificate). */
+			 * by SSL_CTX_use_certificate).
+			 */
 		}
+
 		/* When the while loop ends, it's usually just EOF. */
 		err = ERR_peek_last_error();
-		if (ERR_GET_LIB(err) == ERR_LIB_PEM && ERR_GET_REASON(err) == PEM_R_NO_START_LINE)
+		if (ERR_GET_LIB(err) == ERR_LIB_PEM &&
+		    ERR_GET_REASON(err) == PEM_R_NO_START_LINE)
 			ERR_clear_error();
 		else
 			ret = 0; /* some real error */
@@ -716,8 +716,6 @@ SSL_CTX_use_certificate_chain_file(SSL_CTX *ctx, const char *file)
 end:
 	if (x != NULL)
 		X509_free(x);
-	if (in != NULL)
-		BIO_free(in);
+	BIO_free(in);
 	return (ret);
 }
-#endif

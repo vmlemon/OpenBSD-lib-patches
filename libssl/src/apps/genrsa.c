@@ -1,4 +1,4 @@
-/* apps/genrsa.c */
+/* $OpenBSD: genrsa.c,v 1.37 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,28 +57,32 @@
  */
 
 #include <openssl/opensslconf.h>
+
 /* Until the key-gen callbacks are modified to use newer prototypes, we allow
  * deprecated functions for openssl-internal code */
 #ifdef OPENSSL_NO_DEPRECATED
 #undef OPENSSL_NO_DEPRECATED
 #endif
 
-#ifndef OPENSSL_NO_RSA
-#include <stdio.h>
-#include <string.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <stdio.h>
+#include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
-#include <openssl/err.h>
 #include <openssl/bn.h>
-#include <openssl/rsa.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
 
-#define DEFBITS	1024
+#define DEFBITS	2048
 
 static int genrsa_cb(int p, int n, BN_GENCB * cb);
 
@@ -101,7 +105,6 @@ genrsa_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
-	char *inrand = NULL;
 	BIO *out = NULL;
 	BIGNUM *bn = BN_new();
 	RSA *rsa = NULL;
@@ -109,15 +112,8 @@ genrsa_main(int argc, char **argv)
 	if (!bn)
 		goto err;
 
-	signal(SIGPIPE, SIG_IGN);
 	BN_GENCB_set(&cb, genrsa_cb, bio_err);
 
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto err;
 	if ((out = BIO_new(BIO_s_file())) == NULL) {
 		BIO_printf(bio_err, "unable to create BIO for output\n");
 		goto err;
@@ -142,11 +138,6 @@ genrsa_main(int argc, char **argv)
 			engine = *(++argv);
 		}
 #endif
-		else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
-		}
 #ifndef OPENSSL_NO_DES
 		else if (strcmp(*argv, "-des") == 0)
 			enc = EVP_des_cbc();
@@ -156,10 +147,6 @@ genrsa_main(int argc, char **argv)
 #ifndef OPENSSL_NO_IDEA
 		else if (strcmp(*argv, "-idea") == 0)
 			enc = EVP_idea_cbc();
-#endif
-#ifndef OPENSSL_NO_SEED
-		else if (strcmp(*argv, "-seed") == 0)
-			enc = EVP_seed_cbc();
 #endif
 #ifndef OPENSSL_NO_AES
 		else if (strcmp(*argv, "-aes128") == 0)
@@ -194,10 +181,6 @@ bad:
 #ifndef OPENSSL_NO_IDEA
 		BIO_printf(bio_err, " -idea           encrypt the generated key with IDEA in cbc mode\n");
 #endif
-#ifndef OPENSSL_NO_SEED
-		BIO_printf(bio_err, " -seed\n");
-		BIO_printf(bio_err, "                 encrypt PEM output with cbc seed\n");
-#endif
 #ifndef OPENSSL_NO_AES
 		BIO_printf(bio_err, " -aes128, -aes192, -aes256\n");
 		BIO_printf(bio_err, "                 encrypt PEM output with cbc aes\n");
@@ -213,9 +196,6 @@ bad:
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err, " -engine e       use engine e, possibly a hardware device.\n");
 #endif
-		BIO_printf(bio_err, " -rand file:file:...\n");
-		BIO_printf(bio_err, "                 load the file (or the files in the directory) into\n");
-		BIO_printf(bio_err, "                 the random number generator\n");
 		goto err;
 	}
 	ERR_load_crypto_strings();
@@ -268,7 +248,7 @@ bad:
 		cb_data.password = passout;
 		cb_data.prompt_info = outfile;
 		if (!PEM_write_bio_RSAPrivateKey(out, rsa, enc, NULL, 0,
-			(pem_password_cb *) password_callback, &cb_data))
+			password_callback, &cb_data))
 			goto err;
 	}
 
@@ -280,11 +260,10 @@ err:
 		RSA_free(rsa);
 	if (out)
 		BIO_free_all(out);
-	if (passout)
-		free(passout);
+	free(passout);
 	if (ret != 0)
 		ERR_print_errors(bio_err);
-	
+
 	return (ret);
 }
 
@@ -305,4 +284,3 @@ genrsa_cb(int p, int n, BN_GENCB * cb)
 	(void) BIO_flush(cb->arg);
 	return 1;
 }
-#endif

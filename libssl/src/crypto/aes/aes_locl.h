@@ -1,4 +1,4 @@
-/* crypto/aes/aes.h -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: aes_locl.h,v 1.10 2014/06/12 15:49:27 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 1998-2002 The OpenSSL Project.  All rights reserved.
  *
@@ -52,7 +52,7 @@
 #ifndef HEADER_AES_LOCL_H
 #define HEADER_AES_LOCL_H
 
-#include <openssl/e_os2.h>
+#include <openssl/opensslconf.h>
 
 #ifdef OPENSSL_NO_AES
 #error AES is disabled.

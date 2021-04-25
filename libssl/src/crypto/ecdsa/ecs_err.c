@@ -1,4 +1,4 @@
-/* crypto/ecdsa/ecs_err.c */
+/* $OpenBSD: ecs_err.c,v 1.3 2014/07/10 22:45:57 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
  *
@@ -59,6 +59,9 @@
  */
 
 #include <stdio.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/err.h>
 #include <openssl/ecdsa.h>
 

@@ -1,4 +1,4 @@
-/* crypto/sha/sha_locl.h */
+/* $OpenBSD: sha_locl.h,v 1.17 2014/07/09 16:06:13 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -116,9 +116,9 @@ void sha1_block_data_order (SHA_CTX *c, const void *p,size_t num);
 #define INIT_DATA_h4 0xc3d2e1f0UL
 
 #ifdef SHA_0
-fips_md_init(SHA)
+int SHA_Init(SHA_CTX *c)
 #else
-fips_md_init_ctx(SHA1, SHA)
+int SHA1_Init(SHA_CTX *c)
 #endif
 	{
 	memset (c,0,sizeof(*c));
@@ -223,7 +223,7 @@ static void HASH_BLOCK_DATA_ORDER (SHA_CTX *c, const void *p, size_t num)
 	for (;;)
 			{
 
-	if (_BYTE_ORDER != _LITTLE_ENDIAN &&
+	if (BYTE_ORDER != LITTLE_ENDIAN &&
 	    sizeof(SHA_LONG)==4 && ((size_t)p%4)==0)
 		{
 		const SHA_LONG *W=(const SHA_LONG *)data;

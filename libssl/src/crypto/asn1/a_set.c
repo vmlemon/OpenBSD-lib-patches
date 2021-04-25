@@ -1,4 +1,4 @@
-/* crypto/asn1/a_set.c */
+/* $OpenBSD: a_set.c,v 1.16 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,8 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1_mac.h>
+#include <openssl/err.h>
 
 #ifndef NO_ASN1_OLD
 
@@ -121,7 +123,7 @@ i2d_ASN1_SET(STACK_OF(OPENSSL_BLOCK) *a, unsigned char **pp, i2d_of_void *i2d,
 
 	pStart  = p;	/* Catch the beg of Setblobs*/
 	/* In this array we will store the SET blobs */
-	rgSetBlob = malloc(sk_OPENSSL_BLOCK_num(a) * sizeof(MYBLOB));
+	rgSetBlob = reallocarray(NULL, sk_OPENSSL_BLOCK_num(a), sizeof(MYBLOB));
 	if (rgSetBlob == NULL) {
 		ASN1err(ASN1_F_I2D_ASN1_SET, ERR_R_MALLOC_FAILURE);
 		return 0;
@@ -208,8 +210,6 @@ d2i_ASN1_SET(STACK_OF(OPENSSL_BLOCK) **a, const unsigned char **pp, long length,
 
 		if (M_ASN1_D2I_end_sequence())
 			break;
-		/* XXX: This was called with 4 arguments, incorrectly, it seems
-		if ((s = func(NULL, &c.p, c.slen, c.max - c.p)) == NULL) */
 		if ((s = d2i(NULL, &c.p, c.slen)) == NULL) {
 			ASN1err(ASN1_F_D2I_ASN1_SET,
 			    ASN1_R_ERROR_PARSING_SET_ELEMENT);

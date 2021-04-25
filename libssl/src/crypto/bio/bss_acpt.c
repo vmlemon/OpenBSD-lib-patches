@@ -1,4 +1,4 @@
-/* crypto/bio/bss_acpt.c */
+/* $OpenBSD: bss_acpt.c,v 1.24 2014/07/13 16:03:09 beck Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,13 +56,16 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include "cryptlib.h"
-#include <openssl/bio.h>
 #include <sys/socket.h>
 
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 
 #define SOCKET_PROTOCOL IPPROTO_TCP
 
@@ -148,10 +151,8 @@ BIO_ACCEPT_free(BIO_ACCEPT *a)
 	if (a == NULL)
 		return;
 
-	if (a->param_addr != NULL)
-		free(a->param_addr);
-	if (a->addr != NULL)
-		free(a->addr);
+	free(a->param_addr);
+	free(a->addr);
 	if (a->bio_chain != NULL)
 		BIO_free(a->bio_chain);
 	free(a);
@@ -352,9 +353,8 @@ acpt_ctrl(BIO *b, int cmd, long num, void *ptr)
 		if (ptr != NULL) {
 			if (num == 0) {
 				b->init = 1;
-				if (data->param_addr != NULL)
-					free(data->param_addr);
-				data->param_addr = BUF_strdup(ptr);
+				free(data->param_addr);
+				data->param_addr = strdup(ptr);
 			} else if (num == 1) {
 				data->accept_nbio = (ptr != NULL);
 			} else if (num == 2) {

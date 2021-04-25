@@ -1,4 +1,4 @@
-/* apps/openssl.c */
+/* $OpenBSD: openssl.c,v 1.41 2014/07/12 19:31:21 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -109,24 +109,30 @@
  *
  */
 
+#include <err.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
-#include <openssl/crypto.h>
-#include <openssl/rand.h>
-#include <openssl/lhash.h>
 #include <openssl/conf.h>
-#include <openssl/x509.h>
+#include <openssl/crypto.h>
+#include <openssl/err.h>
+#include <openssl/lhash.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
 #include <openssl/ssl.h>
+#include <openssl/x509.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
+
 #include "progs.h"
 #include "s_apps.h"
-#include <openssl/err.h>
 
 static void openssl_startup(void);
 static void openssl_shutdown(void);
@@ -202,8 +208,9 @@ openssl_startup(void)
 	signal(SIGPIPE, SIG_IGN);
 
 	CRYPTO_malloc_init();
-	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
+	SSL_library_init();
+	SSL_load_error_strings();
 
 #ifndef OPENSSL_NO_ENGINE
 	ENGINE_load_builtin_engines();
@@ -228,10 +235,6 @@ openssl_shutdown(void)
 	ERR_remove_thread_state(NULL);
 	RAND_cleanup();
 	ERR_free_strings();
-
-#ifndef OPENSSL_NO_COMP
-	COMP_zlib_cleanup();
-#endif
 }
 
 int
@@ -252,29 +255,11 @@ main(int argc, char **argv)
 	arg.data = NULL;
 	arg.count = 0;
 
+	bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
 	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
+		errx(1, "failed to initialise bio_err");
 
-	if (getenv("OPENSSL_DEBUG_MEMORY") != NULL) {	/* if not defined, use
-							 * compiled-in library
-							 * defaults */
-		if (!(0 == strcmp(getenv("OPENSSL_DEBUG_MEMORY"), "off"))) {
-			CRYPTO_malloc_debug_init();
-			CRYPTO_set_mem_debug_options(V_CRYPTO_MDEBUG_ALL);
-		} else {
-			/* OPENSSL_DEBUG_MEMORY=off */
-			CRYPTO_set_mem_debug_functions(0, 0, 0, 0, 0);
-		}
-	}
-	CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-
-#if 0
-	if (getenv("OPENSSL_DEBUG_LOCKING") != NULL)
-#endif
-	{
-		CRYPTO_set_locking_callback(lock_dbg_cb);
-	}
+	CRYPTO_set_locking_callback(lock_dbg_cb);
 
 	openssl_startup();
 
@@ -308,6 +293,12 @@ main(int argc, char **argv)
 			exit(1);
 		}
 	}
+
+	if (!load_config(bio_err, NULL)) {
+		BIO_printf(bio_err, "failed to load configuration\n");
+		goto end;
+	}
+
 	prog = prog_init();
 
 	/* first check the program name */
@@ -376,20 +367,18 @@ main(int argc, char **argv)
 	ret = 1;
 
 end:
-	if (to_free)
-		free(to_free);
+	free(to_free);
+
 	if (config != NULL) {
 		NCONF_free(config);
 		config = NULL;
 	}
 	if (prog != NULL)
 		lh_FUNCTION_free(prog);
-	if (arg.data != NULL)
-		free(arg.data);
+	free(arg.data);
 
 	openssl_shutdown();
 
-	CRYPTO_mem_leaks(bio_err);
 	if (bio_err != NULL) {
 		BIO_free(bio_err);
 		bio_err = NULL;
@@ -468,9 +457,6 @@ do_cmd(LHASH_OF(FUNCTION) * prog, int argc, char *argv[])
 		else		/* strcmp(argv[0],LIST_CIPHER_COMMANDS) == 0 */
 			list_type = FUNC_TYPE_CIPHER;
 		bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
-
-		if (!load_config(bio_err, NULL))
-			goto end;
 
 		if (list_type == FUNC_TYPE_PKEY)
 			list_pkey(bio_stdout);

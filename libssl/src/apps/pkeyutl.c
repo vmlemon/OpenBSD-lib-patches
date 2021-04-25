@@ -1,3 +1,4 @@
+/* $OpenBSD: pkeyutl.c,v 1.14 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2006.
  */
@@ -55,20 +56,19 @@
  *
  */
 
+#include <string.h>
 
 #include "apps.h"
-#include <string.h>
+
 #include <openssl/err.h>
-#include <openssl/pem.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
 
 #define KEY_PRIVKEY	1
 #define KEY_PUBKEY	2
 #define KEY_CERT	3
 
 static void usage(void);
-
-
 
 static EVP_PKEY_CTX *init_ctx(int *pkeysize,
     char *keyfile, int keyform, int key_type,
@@ -83,7 +83,7 @@ static int do_keyop(EVP_PKEY_CTX * ctx, int pkey_op,
 
 int pkeyutl_main(int argc, char **);
 
-int 
+int
 pkeyutl_main(int argc, char **argv)
 {
 	BIO *in = NULL, *out = NULL;
@@ -106,11 +106,6 @@ pkeyutl_main(int argc, char **argv)
 	argc--;
 	argv++;
 
-	if (!bio_err)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
 
@@ -325,16 +320,14 @@ end:
 		EVP_PKEY_CTX_free(ctx);
 	BIO_free(in);
 	BIO_free_all(out);
-	if (buf_in)
-		free(buf_in);
-	if (buf_out)
-		free(buf_out);
-	if (sig)
-		free(sig);
+	free(buf_in);
+	free(buf_out);
+	free(sig);
+
 	return ret;
 }
 
-static void 
+static void
 usage()
 {
 	BIO_printf(bio_err, "Usage: pkeyutl [options]\n");
@@ -446,15 +439,14 @@ init_ctx(int *pkeysize,
 	}
 end:
 
-	if (passin)
-		free(passin);
+	free(passin);
 
 	return ctx;
 
 
 }
 
-static int 
+static int
 setup_peer(BIO * err, EVP_PKEY_CTX * ctx, int peerform,
     const char *file)
 {
@@ -479,7 +471,7 @@ setup_peer(BIO * err, EVP_PKEY_CTX * ctx, int peerform,
 	return ret;
 }
 
-static int 
+static int
 do_keyop(EVP_PKEY_CTX * ctx, int pkey_op,
     unsigned char *out, size_t * poutlen,
     unsigned char *in, size_t inlen)

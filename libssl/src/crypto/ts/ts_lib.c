@@ -1,4 +1,4 @@
-/* crypto/ts/ts_lib.c */
+/* $OpenBSD: ts_lib.c,v 1.8 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Zoltan Glozik (zglozik@stones.com) for the OpenSSL
  * project 2002.
  */
@@ -57,11 +57,12 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/objects.h>
+#include <string.h>
+
 #include <openssl/bn.h>
+#include <openssl/objects.h>
+#include <openssl/ts.h>
 #include <openssl/x509v3.h>
-#include "ts.h"
 
 /* Local function declarations. */
 
@@ -92,9 +93,10 @@ TS_OBJ_print_bio(BIO *bio, const ASN1_OBJECT *obj)
 	char obj_txt[128];
 
 	int len = OBJ_obj2txt(obj_txt, sizeof(obj_txt), obj, 0);
+	if (len >= sizeof(obj_txt))
+		len = sizeof(obj_txt) - 1;
 	BIO_write(bio, obj_txt, len);
 	BIO_write(bio, "\n", 1);
-
 	return 1;
 }
 

@@ -1,4 +1,4 @@
-/* ssl/s3_pkt.c */
+/* $OpenBSD: s3_pkt.c,v 1.50 2014/07/12 13:11:53 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -178,7 +178,7 @@ ssl3_read_n(SSL *s, int n, int max, int extend)
 	/* For DTLS/UDP reads should not span multiple packets
 	 * because the read operation returns the whole packet
 	 * at once (as long as it fits into the buffer). */
-	if (SSL_version(s) == DTLS1_VERSION || SSL_version(s) == DTLS1_BAD_VER) {
+	if (SSL_IS_DTLS(s)) {
 		if (left > 0 && n > left)
 			n = left;
 	}
@@ -238,18 +238,20 @@ ssl3_read_n(SSL *s, int n, int max, int extend)
 		if (i <= 0) {
 			rb->left = left;
 			if (s->mode & SSL_MODE_RELEASE_BUFFERS &&
-			    SSL_version(s) != DTLS1_VERSION &&
-			    SSL_version(s) != DTLS1_BAD_VER)
+			    !SSL_IS_DTLS(s)) {
 				if (len + left == 0)
 					ssl3_release_read_buffer(s);
+			}
 			return (i);
 		}
 		left += i;
-		/* reads should *never* span multiple packets for DTLS because
-		 * the underlying transport protocol is message oriented as opposed
-		 * to byte oriented as in the TLS case. */
-		if (SSL_version(s) == DTLS1_VERSION ||
-		    SSL_version(s) == DTLS1_BAD_VER) {
+
+		/*
+		 * reads should *never* span multiple packets for DTLS because
+		 * the underlying transport protocol is message oriented as
+		 * opposed to byte oriented as in the TLS case.
+		 */
+		if (SSL_IS_DTLS(s)) {
 			if (n > left)
 				n = left; /* makes the while condition false */
 		}
@@ -333,13 +335,15 @@ again:
 		}
 
 		if ((version >> 8) != SSL3_VERSION_MAJOR) {
-			SSLerr(SSL_F_SSL3_GET_RECORD, SSL_R_WRONG_VERSION_NUMBER);
+			SSLerr(SSL_F_SSL3_GET_RECORD,
+			    SSL_R_WRONG_VERSION_NUMBER);
 			goto err;
 		}
 
 		if (rr->length > s->s3->rbuf.len - SSL3_RT_HEADER_LENGTH) {
 			al = SSL_AD_RECORD_OVERFLOW;
-			SSLerr(SSL_F_SSL3_GET_RECORD, SSL_R_PACKET_LENGTH_TOO_LONG);
+			SSLerr(SSL_F_SSL3_GET_RECORD,
+			    SSL_R_PACKET_LENGTH_TOO_LONG);
 			goto f_err;
 		}
 
@@ -396,11 +400,6 @@ again:
 		goto f_err;
 	}
 
-#ifdef TLS_DEBUG
-	printf("dec %d\n", rr->length);
-	{ unsigned int z; for (z = 0; z<rr->length; z++) printf("%02X%c", rr->data[z],((z+1)%16)?' ':'\n'); }
-	printf("\n");
-#endif
 
 	/* r->length is now the compressed data plus mac */
 	if ((sess != NULL) && (s->enc_read_ctx != NULL) &&
@@ -448,35 +447,26 @@ again:
 
 		i = s->method->ssl3_enc->mac(s,md,0 /* not send */);
 		if (i < 0 || mac == NULL ||
-		    CRYPTO_memcmp(md, mac, (size_t)mac_size) != 0)
+		    timingsafe_memcmp(md, mac, (size_t)mac_size) != 0)
 			enc_err = -1;
-		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH + extra + mac_size)
+		if (rr->length >
+		    SSL3_RT_MAX_COMPRESSED_LENGTH + extra + mac_size)
 			enc_err = -1;
 	}
 
 	if (enc_err < 0) {
-		/* A separate 'decryption_failed' alert was introduced with TLS 1.0,
-		 * SSL 3.0 only has 'bad_record_mac'.  But unless a decryption
-		 * failure is directly visible from the ciphertext anyway,
-		 * we should not reveal which kind of error occured -- this
-		 * might become visible to an attacker (e.g. via a logfile) */
+		/*
+		 * A separate 'decryption_failed' alert was introduced with
+		 * TLS 1.0, SSL 3.0 only has 'bad_record_mac'. But unless a
+		 * decryption failure is directly visible from the ciphertext
+		 * anyway, we should not reveal which kind of error
+		 * occurred -- this might become visible to an attacker
+		 * (e.g. via a logfile)
+		 */
 		al = SSL_AD_BAD_RECORD_MAC;
-		SSLerr(SSL_F_SSL3_GET_RECORD, SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC);
+		SSLerr(SSL_F_SSL3_GET_RECORD,
+		    SSL_R_DECRYPTION_FAILED_OR_BAD_RECORD_MAC);
 		goto f_err;
-	}
-
-	/* r->length is now just compressed */
-	if (s->expand != NULL) {
-		if (rr->length > SSL3_RT_MAX_COMPRESSED_LENGTH + extra) {
-			al = SSL_AD_RECORD_OVERFLOW;
-			SSLerr(SSL_F_SSL3_GET_RECORD, SSL_R_COMPRESSED_LENGTH_TOO_LONG);
-			goto f_err;
-		}
-		if (!ssl3_do_uncompress(s)) {
-			al = SSL_AD_DECOMPRESSION_FAILURE;
-			SSLerr(SSL_F_SSL3_GET_RECORD, SSL_R_BAD_DECOMPRESSION);
-			goto f_err;
-		}
 	}
 
 	if (rr->length > SSL3_RT_MAX_PLAIN_LENGTH + extra) {
@@ -511,46 +501,6 @@ err:
 	return (ret);
 }
 
-int
-ssl3_do_uncompress(SSL *ssl)
-{
-#ifndef OPENSSL_NO_COMP
-	int i;
-	SSL3_RECORD *rr;
-
-	rr = &(ssl->s3->rrec);
-	i = COMP_expand_block(ssl->expand, rr->comp,
-	SSL3_RT_MAX_PLAIN_LENGTH, rr->data, (int)rr->length);
-	if (i < 0)
-		return (0);
-	else
-		rr->length = i;
-	rr->data = rr->comp;
-#endif
-	return (1);
-}
-
-int
-ssl3_do_compress(SSL *ssl)
-{
-#ifndef OPENSSL_NO_COMP
-	int i;
-	SSL3_RECORD *wr;
-
-	wr = &(ssl->s3->wrec);
-	i = COMP_compress_block(ssl->compress, wr->data,
-	    SSL3_RT_MAX_COMPRESSED_LENGTH,
-	    wr->input, (int)wr->length);
-	if (i < 0)
-		return (0);
-	else
-		wr->length = i;
-
-	wr->input = wr->data;
-#endif
-	return (1);
-}
-
 /* Call this to write data in records of type 'type'
  * It will return <= 0 if not all data has been sent or non-blocking IO.
  */
@@ -575,7 +525,8 @@ ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
 		if (i < 0)
 			return (i);
 		if (i == 0) {
-			SSLerr(SSL_F_SSL3_WRITE_BYTES, SSL_R_SSL_HANDSHAKE_FAILURE);
+			SSLerr(SSL_F_SSL3_WRITE_BYTES,
+			    SSL_R_SSL_HANDSHAKE_FAILURE);
 			return -1;
 		}
 	}
@@ -597,8 +548,11 @@ ssl3_write_bytes(SSL *s, int type, const void *buf_, int len)
 
 		if ((i == (int)n) || (type == SSL3_RT_APPLICATION_DATA &&
 		    (s->mode & SSL_MODE_ENABLE_PARTIAL_WRITE))) {
-			/* next chunk of data should get another prepended empty fragment
-			 * in ciphersuites with known-IV weakness: */
+			/*
+			 * Next chunk of data should get another prepended
+			 * empty fragment in ciphersuites with known-IV
+			 * weakness.
+			 */
 			s->s3->empty_fragment_done = 0;
 
 			return tot + i;
@@ -651,11 +605,7 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 
 	if ((sess == NULL) || (s->enc_write_ctx == NULL) ||
 	    (EVP_MD_CTX_md(s->write_hash) == NULL)) {
-#if 1
 		clear = s->enc_write_ctx ? 0 : 1; /* must be AEAD cipher */
-#else
-		clear = 1;
-#endif
 		mac_size = 0;
 	} else {
 		mac_size = EVP_MD_CTX_size(s->write_hash);
@@ -663,12 +613,17 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 			goto err;
 	}
 
-	/* 'create_empty_fragment' is true only when this function calls itself */
+	/*
+	 * 'create_empty_fragment' is true only when this function calls
+	 * itself.
+	 */
 	if (!clear && !create_empty_fragment && !s->s3->empty_fragment_done) {
-		/* countermeasure against known-IV weakness in CBC ciphersuites
-		 * (see http://www.openssl.org/~bodo/tls-cbc.txt) */
-
-		if (s->s3->need_empty_fragments && type == SSL3_RT_APPLICATION_DATA) {
+		/*
+		 * Countermeasure against known-IV weakness in CBC ciphersuites
+		 * (see http://www.openssl.org/~bodo/tls-cbc.txt)
+		 */
+		if (s->s3->need_empty_fragments &&
+		    type == SSL3_RT_APPLICATION_DATA) {
 			/* recursive function call with 'create_empty_fragment' set;
 			 * this prepares and buffers the data for an empty fragment
 			 * (these 'prefix_len' bytes are sent out later
@@ -680,7 +635,8 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 			if (prefix_len >
 				(SSL3_RT_HEADER_LENGTH + SSL3_RT_SEND_MAX_ENCRYPTED_OVERHEAD)) {
 				/* insufficient space */
-				SSLerr(SSL_F_DO_SSL3_WRITE, ERR_R_INTERNAL_ERROR);
+				SSLerr(SSL_F_DO_SSL3_WRITE,
+				    ERR_R_INTERNAL_ERROR);
 				goto err;
 			}
 		}
@@ -727,10 +683,10 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 
 	/* field where we are to write out packet length */
 	plen = p;
-
 	p += 2;
-	/* Explicit IV length, block ciphers and TLS version 1.1 or later */
-	if (s->enc_write_ctx && s->version >= TLS1_1_VERSION) {
+
+	/* Explicit IV length. */
+	if (s->enc_write_ctx && SSL_USE_EXPLICIT_IV(s)) {
 		int mode = EVP_CIPHER_CTX_mode(s->enc_write_ctx);
 		if (mode == EVP_CIPH_CBC_MODE) {
 			eivlen = EVP_CIPHER_CTX_iv_length(s->enc_write_ctx);
@@ -742,6 +698,9 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 			eivlen = EVP_GCM_TLS_EXPLICIT_IV_LEN;
 		else
 			eivlen = 0;
+	} else if (s->aead_write_ctx != NULL &&
+	    s->aead_write_ctx->variable_nonce_in_record) {
+		eivlen = s->aead_write_ctx->variable_nonce_len;
 	} else
 		eivlen = 0;
 
@@ -752,23 +711,16 @@ do_ssl3_write(SSL *s, int type, const unsigned char *buf,
 
 	/* we now 'read' from wr->input, wr->length bytes into wr->data */
 
-	/* first we compress */
-	if (s->compress != NULL) {
-		if (!ssl3_do_compress(s)) {
-			SSLerr(SSL_F_DO_SSL3_WRITE, SSL_R_COMPRESSION_FAILURE);
-			goto err;
-		}
-	} else {
-		memcpy(wr->data, wr->input, wr->length);
-		wr->input = wr->data;
-	}
+	memcpy(wr->data, wr->input, wr->length);
+	wr->input = wr->data;
 
 	/* we should still have the output to wr->data and the input
 	 * from wr->input.  Length should be wr->length.
 	 * wr->data still points in the wb->buf */
 
 	if (mac_size != 0) {
-		if (s->method->ssl3_enc->mac(s, &(p[wr->length + eivlen]), 1) < 0)
+		if (s->method->ssl3_enc->mac(s,
+		    &(p[wr->length + eivlen]), 1) < 0)
 			goto err;
 		wr->length += mac_size;
 	}
@@ -820,8 +772,7 @@ err:
 
 /* if s->s3->wbuf.left != 0, we need to call this */
 int
-ssl3_write_pending(SSL *s, int type, const unsigned char *buf,
-    unsigned int len)
+ssl3_write_pending(SSL *s, int type, const unsigned char *buf, unsigned int len)
 {
 	int i;
 	SSL3_BUFFER *wb = &(s->s3->wbuf);
@@ -849,18 +800,17 @@ ssl3_write_pending(SSL *s, int type, const unsigned char *buf,
 			wb->left = 0;
 			wb->offset += i;
 			if (s->mode & SSL_MODE_RELEASE_BUFFERS &&
-			    SSL_version(s) != DTLS1_VERSION &&
-			    SSL_version(s) != DTLS1_BAD_VER)
+			    !SSL_IS_DTLS(s))
 				ssl3_release_write_buffer(s);
 			s->rwstate = SSL_NOTHING;
 			return (s->s3->wpend_ret);
 		} else if (i <= 0) {
-			if (s->version == DTLS1_VERSION ||
-			    s->version == DTLS1_BAD_VER) {
-				/* For DTLS, just drop it. That's kind of the whole
-				   point in using a datagram service */
+			/*
+			 * For DTLS, just drop it. That's kind of the
+			 * whole point in using a datagram service.
+			 */
+			if (SSL_IS_DTLS(s))
 				wb->left = 0;
-			}
 			return (i);
 		}
 		wb->offset += i;
@@ -912,14 +862,15 @@ ssl3_read_bytes(SSL *s, int type, unsigned char *buf, int len, int peek)
 		return -1;
 	}
 
-	if ((type && (type != SSL3_RT_APPLICATION_DATA) &&
-	    (type != SSL3_RT_HANDSHAKE) && type) ||
+	if ((type && type != SSL3_RT_APPLICATION_DATA &&
+	    type != SSL3_RT_HANDSHAKE) ||
 	    (peek && (type != SSL3_RT_APPLICATION_DATA))) {
 		SSLerr(SSL_F_SSL3_READ_BYTES, ERR_R_INTERNAL_ERROR);
 		return -1;
 	}
 
-	if ((type == SSL3_RT_HANDSHAKE) && (s->s3->handshake_fragment_len > 0)) {
+	if ((type == SSL3_RT_HANDSHAKE) &&
+	    (s->s3->handshake_fragment_len > 0)) {
 		/* (partially) satisfy request from storage */
 		unsigned char *src = s->s3->handshake_fragment;
 		unsigned char *dst = buf;
@@ -939,15 +890,18 @@ ssl3_read_bytes(SSL *s, int type, unsigned char *buf, int len, int peek)
 		return n;
 	}
 
-	/* Now s->s3->handshake_fragment_len == 0 if type == SSL3_RT_HANDSHAKE. */
-
+	/*
+	 * Now s->s3->handshake_fragment_len == 0 if
+	 * type == SSL3_RT_HANDSHAKE.
+	 */
 	if (!s->in_handshake && SSL_in_init(s)) {
 		/* type == SSL3_RT_APPLICATION_DATA */
 		i = s->handshake_func(s);
 		if (i < 0)
 			return (i);
 		if (i == 0) {
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_SSL_HANDSHAKE_FAILURE);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_SSL_HANDSHAKE_FAILURE);
 			return (-1);
 		}
 	}
@@ -975,7 +929,8 @@ start:
 	                               * reset by ssl3_get_finished */
 	    && (rr->type != SSL3_RT_HANDSHAKE)) {
 		al = SSL_AD_UNEXPECTED_MESSAGE;
-		SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_DATA_BETWEEN_CCS_AND_FINISHED);
+		SSLerr(SSL_F_SSL3_READ_BYTES,
+		    SSL_R_DATA_BETWEEN_CCS_AND_FINISHED);
 		goto f_err;
 	}
 
@@ -988,13 +943,15 @@ start:
 	}
 
 
-	if (type == rr->type) { /* SSL3_RT_APPLICATION_DATA or SSL3_RT_HANDSHAKE */
+	/* SSL3_RT_APPLICATION_DATA or SSL3_RT_HANDSHAKE */
+	if (type == rr->type) {
 		/* make sure that we are not getting application data when we
 		 * are doing a handshake for the first time */
 		if (SSL_in_init(s) && (type == SSL3_RT_APPLICATION_DATA) &&
 			(s->enc_read_ctx == NULL)) {
 			al = SSL_AD_UNEXPECTED_MESSAGE;
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_APP_DATA_IN_HANDSHAKE);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_APP_DATA_IN_HANDSHAKE);
 			goto f_err;
 		}
 
@@ -1045,7 +1002,8 @@ start:
 			dest_len = &s->s3->alert_fragment_len;
 		}
 		if (dest_maxlen > 0) {
-			n = dest_maxlen - *dest_len; /* available space in 'dest' */
+			/* available space in 'dest' */
+			n = dest_maxlen - *dest_len;
 			if (rr->length < n)
 				n = rr->length; /* available bytes */
 
@@ -1080,7 +1038,8 @@ start:
 
 		if (s->msg_callback)
 			s->msg_callback(0, s->version, SSL3_RT_HANDSHAKE,
-			    s->s3->handshake_fragment, 4, s, s->msg_callback_arg);
+			    s->s3->handshake_fragment, 4, s,
+			    s->msg_callback_arg);
 
 		if (SSL_is_init_finished(s) &&
 		    !(s->s3->flags & SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS) &&
@@ -1091,7 +1050,8 @@ start:
 				if (i < 0)
 					return (i);
 				if (i == 0) {
-					SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_SSL_HANDSHAKE_FAILURE);
+					SSLerr(SSL_F_SSL3_READ_BYTES,
+					    SSL_R_SSL_HANDSHAKE_FAILURE);
 					return (-1);
 				}
 
@@ -1170,21 +1130,19 @@ start:
 			 */
 			else if (alert_descr == SSL_AD_NO_RENEGOTIATION) {
 				al = SSL_AD_HANDSHAKE_FAILURE;
-				SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_NO_RENEGOTIATION);
+				SSLerr(SSL_F_SSL3_READ_BYTES,
+				    SSL_R_NO_RENEGOTIATION);
 				goto f_err;
 			}
-#ifdef SSL_AD_MISSING_SRP_USERNAME
-			else if (alert_descr == SSL_AD_MISSING_SRP_USERNAME)
-				return (0);
-#endif
 		} else if (alert_level == 2) {
 			/* fatal */
 			s->rwstate = SSL_NOTHING;
 			s->s3->fatal_alert = alert_descr;
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_AD_REASON_OFFSET + alert_descr);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_AD_REASON_OFFSET + alert_descr);
 			ERR_asprintf_error_data("SSL alert number %d",
 			    alert_descr);
-			s->shutdown|=SSL_RECEIVED_SHUTDOWN;
+			s->shutdown |= SSL_RECEIVED_SHUTDOWN;
 			SSL_CTX_remove_session(s->ctx, s->session);
 			return (0);
 		} else {
@@ -1209,16 +1167,27 @@ start:
 		if ((rr->length != 1) || (rr->off != 0) ||
 			(rr->data[0] != SSL3_MT_CCS)) {
 			al = SSL_AD_ILLEGAL_PARAMETER;
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_BAD_CHANGE_CIPHER_SPEC);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_BAD_CHANGE_CIPHER_SPEC);
 			goto f_err;
 		}
 
 		/* Check we have a cipher to change to */
 		if (s->s3->tmp.new_cipher == NULL) {
 			al = SSL_AD_UNEXPECTED_MESSAGE;
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_CCS_RECEIVED_EARLY);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_CCS_RECEIVED_EARLY);
 			goto f_err;
 		}
+
+		/* Check that we should be receiving a Change Cipher Spec. */
+		if (!(s->s3->flags & SSL3_FLAGS_CCS_OK)) {
+			al = SSL_AD_UNEXPECTED_MESSAGE;
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_CCS_RECEIVED_EARLY);
+			goto f_err;
+		}
+		s->s3->flags &= ~SSL3_FLAGS_CCS_OK;
 
 		rr->length = 0;
 
@@ -1247,7 +1216,8 @@ start:
 		if (i < 0)
 			return (i);
 		if (i == 0) {
-			SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_SSL_HANDSHAKE_FAILURE);
+			SSLerr(SSL_F_SSL3_READ_BYTES,
+			    SSL_R_SSL_HANDSHAKE_FAILURE);
 			return (-1);
 		}
 
@@ -1270,15 +1240,15 @@ start:
 
 	switch (rr->type) {
 	default:
-#ifndef OPENSSL_NO_TLS
-		/* TLS up to v1.1 just ignores unknown message types:
+		/*
+		 * TLS up to v1.1 just ignores unknown message types:
 		 * TLS v1.2 give an unexpected message alert.
 		 */
-		if (s->version >= TLS1_VERSION && s->version <= TLS1_1_VERSION) {
+		if (s->version >= TLS1_VERSION &&
+		    s->version <= TLS1_1_VERSION) {
 			rr->length = 0;
 			goto start;
 		}
-#endif
 		al = SSL_AD_UNEXPECTED_MESSAGE;
 		SSLerr(SSL_F_SSL3_READ_BYTES, SSL_R_UNEXPECTED_RECORD);
 		goto f_err;
@@ -1301,16 +1271,12 @@ start:
 		 */
 		if (s->s3->in_read_app_data &&
 		    (s->s3->total_renegotiations != 0) &&
-		    ((
-		    (s->state & SSL_ST_CONNECT) &&
+		    (((s->state & SSL_ST_CONNECT) &&
 		    (s->state >= SSL3_ST_CW_CLNT_HELLO_A) &&
-		    (s->state <= SSL3_ST_CR_SRVR_HELLO_A)
-		    ) || (
-		    (s->state & SSL_ST_ACCEPT) &&
+		    (s->state <= SSL3_ST_CR_SRVR_HELLO_A)) ||
+		    ((s->state & SSL_ST_ACCEPT) &&
 		    (s->state <= SSL3_ST_SW_HELLO_REQ_A) &&
-		    (s->state >= SSL3_ST_SR_CLNT_HELLO_A)
-		    )
-		    )) {
+		    (s->state >= SSL3_ST_SR_CLNT_HELLO_A)))) {
 			s->s3->in_read_app_data = 2;
 			return (-1);
 		} else {
@@ -1340,7 +1306,7 @@ ssl3_do_change_cipher_spec(SSL *s)
 		i = SSL3_CHANGE_CIPHER_CLIENT_READ;
 
 	if (s->s3->tmp.key_block == NULL) {
-		if (s->session == NULL) {
+		if (s->session == NULL || s->session->master_key_length == 0) {
 			/* might happen if dtls1_read_bytes() calls this */
 			SSLerr(SSL_F_SSL3_DO_CHANGE_CIPHER_SPEC,
 			    SSL_R_CCS_RECEIVED_EARLY);
@@ -1366,8 +1332,8 @@ ssl3_do_change_cipher_spec(SSL *s)
 		slen = s->method->ssl3_enc->client_finished_label_len;
 	}
 
-	i = s->method->ssl3_enc->final_finish_mac(s,
-	sender, slen, s->s3->tmp.peer_finish_md);
+	i = s->method->ssl3_enc->final_finish_mac(s, sender, slen,
+	    s->s3->tmp.peer_finish_md);
 	if (i == 0) {
 		SSLerr(SSL_F_SSL3_DO_CHANGE_CIPHER_SPEC, ERR_R_INTERNAL_ERROR);
 		return 0;

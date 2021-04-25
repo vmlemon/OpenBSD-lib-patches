@@ -1,3 +1,4 @@
+/* $OpenBSD: rand_lib.c,v 1.19 2014/07/11 08:44:49 jsing Exp $ */
 /*
  * Copyright (c) 2014 Ted Unangst <tedu@openbsd.org>
  *
@@ -13,7 +14,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-#include "cryptlib.h"
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/rand.h>
 
 #include <stdlib.h>
@@ -74,7 +77,7 @@ RAND_status(void)
 int
 RAND_poll(void)
 {
-       return 1;
+	return 1;
 }
 
 /*

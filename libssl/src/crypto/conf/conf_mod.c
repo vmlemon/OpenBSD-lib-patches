@@ -1,4 +1,4 @@
-/* conf_mod.c */
+/* $OpenBSD: conf_mod.c,v 1.24 2014/07/13 16:03:09 beck Exp $ */
 /* Written by Stephen Henson (steve@openssl.org) for the OpenSSL
  * project 2001.
  */
@@ -56,18 +56,19 @@
  *
  */
 
-#include <stdio.h>
 #include <ctype.h>
-#include <openssl/crypto.h>
-#include "cryptlib.h"
-#include <openssl/conf.h>
-#include <openssl/dso.h>
-#include <openssl/x509.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
+#include <openssl/conf.h>
+#include <openssl/crypto.h>
+#include <openssl/dso.h>
+#include <openssl/err.h>
+#include <openssl/x509.h>
 
 #define DSO_mod_init_name "OPENSSL_init"
 #define DSO_mod_finish_name "OPENSSL_finish"
-
 
 /* This structure contains a data about supported modules.
  * entries in this table correspond to either dynamic or
@@ -346,8 +347,8 @@ module_init(CONF_MODULE *pmod, char *name, char *value, const CONF *cnf)
 		goto err;
 
 	imod->pmod = pmod;
-	imod->name = BUF_strdup(name);
-	imod->value = BUF_strdup(value);
+	imod->name = name ? strdup(name) : NULL;
+	imod->value = value ? strdup(value) : NULL;
 	imod->usr_data = NULL;
 
 	if (!imod->name || !imod->value)
@@ -386,10 +387,8 @@ err:
 
 memerr:
 	if (imod) {
-		if (imod->name)
-			free(imod->name);
-		if (imod->value)
-			free(imod->value);
+		free(imod->name);
+		free(imod->value);
 		free(imod);
 	}
 
@@ -543,11 +542,12 @@ CONF_module_set_usr_data(CONF_MODULE *pmod, void *usr_data)
 char *
 CONF_get1_default_config_file(void)
 {
-	char *file;
+	char *file = NULL;
 
-	file = getenv("OPENSSL_CONF");
+	if (issetugid() == 0)
+		file = getenv("OPENSSL_CONF");
 	if (file)
-		return BUF_strdup(file);
+		return strdup(file);
 	if (asprintf(&file, "%s/openssl.cnf",
 	    X509_get_default_cert_area()) == -1)
 		return (NULL);

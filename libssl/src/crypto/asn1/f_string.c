@@ -1,4 +1,4 @@
-/* crypto/asn1/f_string.c */
+/* $OpenBSD: f_string.c,v 1.16 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/buffer.h>
+
 #include <openssl/asn1.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 
 int
 i2a_ASN1_STRING(BIO *bp, ASN1_STRING *a, int type)
@@ -102,7 +103,8 @@ a2i_ASN1_STRING(BIO *bp, ASN1_STRING *bs, char *buf, int size)
 	int i, j, k, m, n, again, bufsize;
 	unsigned char *s = NULL, *sp;
 	unsigned char *bufp;
-	int num = 0, slen = 0, first = 1;
+	int first = 1;
+	size_t num = 0, slen = 0;
 
 	bufsize = BIO_gets(bp, buf, size);
 	for (;;) {
@@ -150,14 +152,14 @@ a2i_ASN1_STRING(BIO *bp, ASN1_STRING *bs, char *buf, int size)
 		}
 		i /= 2;
 		if (num + i > slen) {
-			sp = realloc(s, (unsigned int)num + i * 2);
+			sp = realloc(s, num + i);
 			if (sp == NULL) {
 				ASN1err(ASN1_F_A2I_ASN1_STRING,
 				    ERR_R_MALLOC_FAILURE);
 				goto err;
 			}
 			s = sp;
-			slen = num + i * 2;
+			slen = num + i;
 		}
 		for (j = 0; j < i; j++, k += 2) {
 			for (n = 0; n < 2; n++) {

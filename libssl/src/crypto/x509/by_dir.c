@@ -1,4 +1,4 @@
-/* crypto/x509/by_dir.c */
+/* $OpenBSD: by_dir.c,v 1.32 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,22 +56,23 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
-#include <time.h>
+#include <sys/types.h>
+
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
-#include "cryptlib.h"
+#include <openssl/opensslconf.h>
 
-#ifndef NO_SYS_TYPES_H
-# include <sys/types.h>
-#endif
-#ifndef OPENSSL_NO_POSIX_IO
-# include <sys/stat.h>
-#endif
-
+#include <openssl/err.h>
 #include <openssl/lhash.h>
 #include <openssl/x509.h>
 
+#ifndef OPENSSL_NO_POSIX_IO
+# include <sys/stat.h>
+#endif
 
 typedef struct lookup_dir_hashes_st {
 	unsigned long hash;
@@ -132,7 +133,8 @@ dir_ctrl(X509_LOOKUP *ctx, int cmd, const char *argp, long argl,
 	switch (cmd) {
 	case X509_L_ADD_DIR:
 		if (argl == X509_FILETYPE_DEFAULT) {
-			dir = (char *)getenv(X509_get_default_cert_dir_env());
+			if (issetugid() == 0)
+				dir = getenv(X509_get_default_cert_dir_env());
 			if (dir)
 				ret = add_cert_dir(ld, dir, X509_FILETYPE_PEM);
 			else
@@ -153,7 +155,7 @@ new_dir(X509_LOOKUP *lu)
 {
 	BY_DIR *a;
 
-	if ((a = (BY_DIR *)malloc(sizeof(BY_DIR))) == NULL)
+	if ((a = malloc(sizeof(BY_DIR))) == NULL)
 		return (0);
 	if ((a->buffer = BUF_MEM_new()) == NULL) {
 		free(a);
@@ -184,8 +186,7 @@ by_dir_hash_cmp(const BY_DIR_HASH * const *a,
 static void
 by_dir_entry_free(BY_DIR_ENTRY *ent)
 {
-	if (ent->dir)
-		free(ent->dir);
+	free(ent->dir);
 	if (ent->hashes)
 		sk_BY_DIR_HASH_pop_free(ent->hashes, by_dir_hash_free);
 	free(ent);
@@ -242,16 +243,20 @@ add_cert_dir(BY_DIR *ctx, const char *dir, int type)
 				}
 			}
 			ent = malloc(sizeof(BY_DIR_ENTRY));
-			if (!ent)
+			if (!ent) {
+				X509err(X509_F_ADD_CERT_DIR, ERR_R_MALLOC_FAILURE);
 				return 0;
+			}
 			ent->dir_type = type;
 			ent->hashes = sk_BY_DIR_HASH_new(by_dir_hash_cmp);
 			ent->dir = strdup(ss);
 			if (!ent->dir || !ent->hashes) {
+				X509err(X509_F_ADD_CERT_DIR, ERR_R_MALLOC_FAILURE);
 				by_dir_entry_free(ent);
 				return 0;
 			}
 			if (!sk_BY_DIR_ENTRY_push(ctx->dirs, ent)) {
+				X509err(X509_F_ADD_CERT_DIR, ERR_R_MALLOC_FAILURE);
 				by_dir_entry_free(ent);
 				return 0;
 			}
@@ -385,9 +390,16 @@ get_cert_by_subject(X509_LOOKUP *xl, int type, X509_NAME *name,
 			}
 			if (!hent) {
 				hent = malloc(sizeof(BY_DIR_HASH));
+				if (!hent) {
+					X509err(X509_F_GET_CERT_BY_SUBJECT, ERR_R_MALLOC_FAILURE);
+					CRYPTO_w_unlock(CRYPTO_LOCK_X509_STORE);
+					ok = 0;
+					goto finish;
+				}
 				hent->hash = h;
 				hent->suffix = k;
 				if (!sk_BY_DIR_HASH_push(ent->hashes, hent)) {
+					X509err(X509_F_GET_CERT_BY_SUBJECT, ERR_R_MALLOC_FAILURE);
 					CRYPTO_w_unlock(CRYPTO_LOCK_X509_STORE);
 					free(hent);
 					ok = 0;

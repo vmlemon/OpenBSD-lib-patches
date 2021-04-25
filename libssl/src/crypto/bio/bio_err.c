@@ -1,4 +1,4 @@
-/* crypto/bio/bio_err.c */
+/* $OpenBSD: bio_err.c,v 1.16 2014/07/10 22:45:56 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1999-2011 The OpenSSL Project.  All rights reserved.
  *
@@ -59,6 +59,9 @@
  */
 
 #include <stdio.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/err.h>
 #include <openssl/bio.h>
 
@@ -118,6 +121,7 @@ static ERR_STRING_DATA BIO_str_reasons[] = {
 	{ERR_REASON(BIO_R_GETHOSTBYNAME_ADDR_IS_NOT_AF_INET), "gethostbyname addr is not af inet"},
 	{ERR_REASON(BIO_R_INVALID_ARGUMENT)      , "invalid argument"},
 	{ERR_REASON(BIO_R_INVALID_IP_ADDRESS)    , "invalid ip address"},
+	{ERR_REASON(BIO_R_INVALID_PORT_NUMBER)   , "invalid port number"},
 	{ERR_REASON(BIO_R_IN_USE)                , "in use"},
 	{ERR_REASON(BIO_R_KEEPALIVE)             , "keepalive"},
 	{ERR_REASON(BIO_R_NBIO_CONNECT_ERROR)    , "nbio connect error"},

@@ -1,4 +1,4 @@
-/* crypto/asn1/a_print.c */
+/* $OpenBSD: a_print.c,v 1.11 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,7 +57,7 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
 
 int

@@ -1,4 +1,4 @@
-/* v3_ocsp.c */
+/* $OpenBSD: v3_ocsp.c,v 1.10 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -56,12 +56,16 @@
  *
  */
 
+#include <stdio.h>
+#include <string.h>
+
+#include <openssl/opensslconf.h>
+
 #ifndef OPENSSL_NO_OCSP
 
-#include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/conf.h>
 #include <openssl/asn1.h>
+#include <openssl/conf.h>
+#include <openssl/err.h>
 #include <openssl/ocsp.h>
 #include <openssl/x509v3.h>
 

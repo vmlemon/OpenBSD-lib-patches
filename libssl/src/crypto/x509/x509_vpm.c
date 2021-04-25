@@ -1,4 +1,4 @@
-/* x509_vpm.c */
+/* $OpenBSD: x509_vpm.c,v 1.9 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2004.
  */
@@ -57,11 +57,11 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
-#include "cryptlib.h"
+#include <openssl/buffer.h>
 #include <openssl/crypto.h>
 #include <openssl/lhash.h>
-#include <openssl/buffer.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -90,8 +90,7 @@ X509_VERIFY_PARAM_new(void)
 {
 	X509_VERIFY_PARAM *param;
 
-	param = malloc(sizeof(X509_VERIFY_PARAM));
-	memset(param, 0, sizeof(X509_VERIFY_PARAM));
+	param = calloc(1, sizeof(X509_VERIFY_PARAM));
 	x509_verify_param_zero(param);
 	return param;
 }
@@ -213,8 +212,7 @@ X509_VERIFY_PARAM_set1(X509_VERIFY_PARAM *to, const X509_VERIFY_PARAM *from)
 int
 X509_VERIFY_PARAM_set1_name(X509_VERIFY_PARAM *param, const char *name)
 {
-	if (param->name)
-		free(param->name);
+	free(param->name);
 	param->name = BUF_strdup(name);
 	if (param->name)
 		return 1;

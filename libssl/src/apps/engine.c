@@ -1,4 +1,4 @@
-/* apps/engine.c -*- mode: C; c-file-style: "eay" -*- */
+/* $OpenBSD: engine.c,v 1.27 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Richard Levitte <richard@levitte.org> for the OpenSSL
  * project 2000.
  */
@@ -56,16 +56,16 @@
  *
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "apps.h"
-#include <openssl/err.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#include <openssl/err.h>
 #include <openssl/ssl.h>
-
 
 static const char *engine_usage[] = {
 	"usage: engine opts [engine ...]\n",
@@ -87,13 +87,13 @@ static const char *engine_usage[] = {
 	NULL
 };
 
-static void 
+static void
 identity(char *ptr)
 {
 	return;
 }
 
-static int 
+static int
 append_buf(char **buf, const char *s, int *size, int step)
 {
 	int l = strlen(s);
@@ -122,7 +122,7 @@ append_buf(char **buf, const char *s, int *size, int step)
 	return 1;
 }
 
-static int 
+static int
 util_flags(BIO * bio_out, unsigned int flags, const char *indent)
 {
 	int started = 0, err = 0;
@@ -181,7 +181,7 @@ util_flags(BIO * bio_out, unsigned int flags, const char *indent)
 	return 1;
 }
 
-static int 
+static int
 util_verbose(ENGINE * e, int verbose, BIO * bio_out, const char *indent)
 {
 	static const int line_wrap = 78;
@@ -259,10 +259,9 @@ util_verbose(ENGINE * e, int verbose, BIO * bio_out, const char *indent)
 		}
 		free(name);
 		name = NULL;
-		if (desc) {
-			free(desc);
-			desc = NULL;
-		}
+		free(desc);
+		desc = NULL;
+
 		/* Move to the next command */
 		num = ENGINE_ctrl(e, ENGINE_CTRL_GET_NEXT_CMD_TYPE,
 		    num, NULL, NULL);
@@ -273,14 +272,12 @@ util_verbose(ENGINE * e, int verbose, BIO * bio_out, const char *indent)
 err:
 	if (cmds)
 		sk_OPENSSL_STRING_pop_free(cmds, identity);
-	if (name)
-		free(name);
-	if (desc)
-		free(desc);
+	free(name);
+	free(desc);
 	return ret;
 }
 
-static void 
+static void
 util_do_cmds(ENGINE * e, STACK_OF(OPENSSL_STRING) * cmds,
     BIO * bio_out, const char *indent)
 {
@@ -322,7 +319,7 @@ util_do_cmds(ENGINE * e, STACK_OF(OPENSSL_STRING) * cmds,
 
 int engine_main(int, char **);
 
-int 
+int
 engine_main(int argc, char **argv)
 {
 	int ret = 1, i;
@@ -336,14 +333,6 @@ engine_main(int argc, char **argv)
 	BIO *bio_out = NULL;
 	const char *indent = "     ";
 
-	signal(SIGPIPE, SIG_IGN);
-	SSL_load_error_strings();
-
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 	bio_out = BIO_new_fp(stdout, BIO_NOCLOSE);
 
 	argc--;
@@ -499,7 +488,7 @@ end:
 	sk_OPENSSL_STRING_pop_free(post_cmds, identity);
 	if (bio_out != NULL)
 		BIO_free_all(bio_out);
-	
+
 	return (ret);
 }
 #endif

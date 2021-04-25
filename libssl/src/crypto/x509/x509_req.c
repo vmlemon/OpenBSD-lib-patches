@@ -1,4 +1,4 @@
-/* crypto/x509/x509_req.c */
+/* $OpenBSD: x509_req.c,v 1.15 2014/07/11 08:44:49 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,15 +57,18 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/bn.h>
-#include <openssl/evp.h>
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/asn1.h>
 #include <openssl/asn1t.h>
-#include <openssl/x509.h>
-#include <openssl/objects.h>
+#include <openssl/bn.h>
 #include <openssl/buffer.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
 #include <openssl/pem.h>
+#include <openssl/x509.h>
 
 X509_REQ *
 X509_to_X509_REQ(X509 *x, EVP_PKEY *pkey, const EVP_MD *md)
@@ -84,7 +87,7 @@ X509_to_X509_REQ(X509 *x, EVP_PKEY *pkey, const EVP_MD *md)
 	ri = ret->req_info;
 
 	ri->version->length = 1;
-	ri->version->data = (unsigned char *)malloc(1);
+	ri->version->data = malloc(1);
 	if (ri->version->data == NULL)
 		goto err;
 	ri->version->data[0] = 0; /* version == 0 */

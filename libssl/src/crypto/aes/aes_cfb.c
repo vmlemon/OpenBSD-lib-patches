@@ -1,4 +1,4 @@
-/* crypto/aes/aes_cfb.c -*- mode:C; c-file-style: "eay" -*- */
+/* $OpenBSD: aes_cfb.c,v 1.8 2014/06/12 15:49:27 deraadt Exp $ */
 /* ====================================================================
  * Copyright (c) 2002-2006 The OpenSSL Project.  All rights reserved.
  *

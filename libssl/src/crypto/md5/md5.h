@@ -1,4 +1,4 @@
-/* crypto/md5/md5.h */
+/* $OpenBSD: md5.h,v 1.19 2014/07/13 14:13:27 beck Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,11 +56,15 @@
  * [including the GNU Public Licence.]
  */
 
+#include <stddef.h>
+
 #ifndef HEADER_MD5_H
 #define HEADER_MD5_H
+#if !defined(HAVE_ATTRIBUTE__BOUNDED__) && !defined(__OpenBSD__)
+#define __bounded__(x, y, z)
+#endif
 
-#include <openssl/e_os2.h>
-#include <stddef.h>
+#include <openssl/opensslconf.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -77,14 +81,7 @@ extern "C" {
  * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  */
 
-#if defined(__LP32__)
-#define MD5_LONG unsigned long
-#elif defined(__ILP64__)
-#define MD5_LONG unsigned long
-#define MD5_LONG_LOG2 3
-#else
 #define MD5_LONG unsigned int
-#endif
 
 #define MD5_CBLOCK	64
 #define MD5_LBLOCK	(MD5_CBLOCK/4)
@@ -99,9 +96,11 @@ typedef struct MD5state_st
 	} MD5_CTX;
 
 int MD5_Init(MD5_CTX *c);
-int MD5_Update(MD5_CTX *c, const void *data, size_t len);
+int MD5_Update(MD5_CTX *c, const void *data, size_t len)
+	__attribute__ ((__bounded__(__buffer__,2,3)));
 int MD5_Final(unsigned char *md, MD5_CTX *c);
-unsigned char *MD5(const unsigned char *d, size_t n, unsigned char *md);
+unsigned char *MD5(const unsigned char *d, size_t n, unsigned char *md)
+	__attribute__ ((__bounded__(__buffer__,1,2)));
 void MD5_Transform(MD5_CTX *c, const unsigned char *b);
 #ifdef  __cplusplus
 }

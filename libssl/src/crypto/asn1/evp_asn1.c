@@ -1,4 +1,4 @@
-/* crypto/asn1/evp_asn1.c */
+/* $OpenBSD: evp_asn1.c,v 1.13 2014/07/12 16:03:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
 #include <openssl/asn1_mac.h>
+#include <openssl/err.h>
 
 int
 ASN1_TYPE_set_octetstring(ASN1_TYPE *a, unsigned char *data, int len)
@@ -68,8 +70,10 @@ ASN1_TYPE_set_octetstring(ASN1_TYPE *a, unsigned char *data, int len)
 
 	if ((os = M_ASN1_OCTET_STRING_new()) == NULL)
 		return (0);
-	if (!M_ASN1_OCTET_STRING_set(os, data, len))
+	if (!M_ASN1_OCTET_STRING_set(os, data, len)) {
+		M_ASN1_OCTET_STRING_free(os);
 		return (0);
+	}
 	ASN1_TYPE_set(a, V_ASN1_OCTET_STRING, os);
 	return (1);
 }
@@ -189,9 +193,7 @@ err:
 		ASN1err(ASN1_F_ASN1_TYPE_GET_INT_OCTETSTRING,
 		    ASN1_R_DATA_IS_WRONG);
 	}
-	if (os != NULL)
-		M_ASN1_OCTET_STRING_free(os);
-	if (ai != NULL)
-		M_ASN1_INTEGER_free(ai);
+	M_ASN1_OCTET_STRING_free(os);
+	M_ASN1_INTEGER_free(ai);
 	return (ret);
 }

@@ -1,4 +1,4 @@
-/* apps/genpkey.c */
+/* $OpenBSD: genpkey.c,v 1.13 2014/07/14 00:35:10 deraadt Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 2006
  */
@@ -55,17 +55,21 @@
  * Hudson (tjh@cryptsoft.com).
  *
  */
+
 #include <stdio.h>
 #include <string.h>
+
 #include "apps.h"
-#include <openssl/pem.h>
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/pem.h>
+
 #ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
 #endif
 
-static int 
+static int
 init_keygen_file(BIO * err, EVP_PKEY_CTX ** pctx, const char *file,
     ENGINE * e);
 static int genpkey_cb(EVP_PKEY_CTX * ctx);
@@ -90,12 +94,6 @@ genpkey_main(int argc, char **argv)
 	int ret = 1, rv;
 
 	int do_param = 0;
-
-	if (bio_err == NULL)
-		bio_err = BIO_new_fp(stderr, BIO_NOCLOSE);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	outformat = FORMAT_PEM;
 
@@ -261,8 +259,7 @@ end:
 	if (out)
 		BIO_free_all(out);
 	BIO_free(in);
-	if (pass)
-		free(pass);
+	free(pass);
 
 	return ret;
 }

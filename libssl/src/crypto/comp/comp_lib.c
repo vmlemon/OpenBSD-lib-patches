@@ -1,3 +1,4 @@
+/* $OpenBSD: comp_lib.c,v 1.7 2014/06/12 15:49:28 deraadt Exp $ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,11 +10,10 @@ COMP_CTX_new(COMP_METHOD *meth)
 {
 	COMP_CTX *ret;
 
-	if ((ret = (COMP_CTX *)malloc(sizeof(COMP_CTX))) == NULL) {
+	if ((ret = calloc(1, sizeof(COMP_CTX))) == NULL) {
 		/* ZZZZZZZZZZZZZZZZ */
 		return (NULL);
 	}
-	memset(ret, 0, sizeof(COMP_CTX));
 	ret->meth = meth;
 	if ((ret->meth->init != NULL) && !ret->meth->init(ret)) {
 		free(ret);

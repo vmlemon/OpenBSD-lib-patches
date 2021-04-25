@@ -1,4 +1,4 @@
-/* crypto/asn1/i2d_pu.c */
+/* $OpenBSD: i2d_pu.c,v 1.10 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,18 +57,22 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
+#include <openssl/opensslconf.h>
+
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
-#ifndef OPENSSL_NO_RSA
-#include <openssl/rsa.h>
-#endif
+
 #ifndef OPENSSL_NO_DSA
 #include <openssl/dsa.h>
 #endif
 #ifndef OPENSSL_NO_EC
 #include <openssl/ec.h>
+#endif
+#ifndef OPENSSL_NO_RSA
+#include <openssl/rsa.h>
 #endif
 
 int

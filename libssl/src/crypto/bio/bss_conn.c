@@ -1,4 +1,4 @@
-/* crypto/bio/bss_conn.c */
+/* $OpenBSD: bss_conn.c,v 1.30 2014/07/13 16:03:09 beck Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,15 +56,19 @@
  * [including the GNU Public Licence.]
  */
 
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include "cryptlib.h"
-#include <openssl/bio.h>
-#include <netdb.h>
 #include <sys/socket.h>
+
 #include <netinet/in.h>
 
+#include <errno.h>
+#include <netdb.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <openssl/bio.h>
+#include <openssl/buffer.h>
+#include <openssl/err.h>
 
 #define SOCKET_PROTOCOL IPPROTO_TCP
 
@@ -147,9 +151,8 @@ conn_state(BIO *b, BIO_CONNECT *c)
 							*q = '\0';
 							break;
 						}
-					if (c->param_port != NULL)
-						free(c->param_port);
-					c->param_port = BUF_strdup(p);
+					free(c->param_port);
+					c->param_port = strdup(p);
 				}
 			}
 
@@ -315,10 +318,8 @@ BIO_CONNECT_free(BIO_CONNECT *a)
 	if (a == NULL)
 		return;
 
-	if (a->param_hostname != NULL)
-		free(a->param_hostname);
-	if (a->param_port != NULL)
-		free(a->param_port);
+	free(a->param_hostname);
+	free(a->param_port);
 	free(a);
 }
 
@@ -469,32 +470,25 @@ conn_ctrl(BIO *b, int cmd, long num, void *ptr)
 		if (ptr != NULL) {
 			b->init = 1;
 			if (num == 0) {
-				if (data->param_hostname != NULL)
-					free(data->param_hostname);
-				data->param_hostname = BUF_strdup(ptr);
+				free(data->param_hostname);
+				data->param_hostname = strdup(ptr);
 			} else if (num == 1) {
-				if (data->param_port != NULL)
-					free(data->param_port);
-				data->param_port = BUF_strdup(ptr);
+				free(data->param_port);
+				data->param_port = strdup(ptr);
 			} else if (num == 2) {
-				char buf[16];
 				unsigned char *p = ptr;
-
-				snprintf(buf, sizeof buf, "%d.%d.%d.%d",
-				    p[0], p[1], p[2], p[3]);
-				if (data->param_hostname != NULL)
-					free(data->param_hostname);
-				data->param_hostname = BUF_strdup(buf);
+				free(data->param_hostname);
+				if (asprintf(&data->param_hostname,
+					"%u.%u.%u.%u", p[0], p[1],
+					p[2], p[3]) == -1)
+					data->param_hostname = NULL;
 				memcpy(&(data->ip[0]), ptr, 4);
 			} else if (num == 3) {
-				char buf[DECIMAL_SIZE(int) + 1];
-
-				snprintf(buf, sizeof buf, "%d",
-				    *(int *)ptr);
-				if (data->param_port != NULL)
-					free(data->param_port);
-				data->param_port = BUF_strdup(buf);
+				free(data->param_port);
 				data->port= *(int *)ptr;
+				if (asprintf(&data->param_port, "%d",
+					data->port) == -1)
+					data->param_port = NULL;
 			}
 		}
 		break;

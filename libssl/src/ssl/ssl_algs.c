@@ -1,4 +1,4 @@
-/* ssl/ssl_algs.c */
+/* $OpenBSD: ssl_algs.c,v 1.19 2014/07/10 08:51:15 tedu Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -97,10 +97,6 @@ SSL_library_init(void)
 	EVP_add_cipher(EVP_camellia_256_cbc());
 #endif
 
-#ifndef OPENSSL_NO_SEED
-	EVP_add_cipher(EVP_seed_cbc());
-#endif
-
 	EVP_add_digest(EVP_md5());
 	EVP_add_digest_alias(SN_md5, "ssl2-md5");
 	EVP_add_digest_alias(SN_md5, "ssl3-md5");
@@ -115,15 +111,7 @@ SSL_library_init(void)
 	EVP_add_digest_alias(SN_dsaWithSHA1, SN_dsaWithSHA1_2);
 	EVP_add_digest_alias(SN_dsaWithSHA1, "DSS1");
 	EVP_add_digest_alias(SN_dsaWithSHA1, "dss1");
-#ifndef OPENSSL_NO_ECDSA
 	EVP_add_digest(EVP_ecdsa());
-#endif
-#ifndef OPENSSL_NO_COMP
-	/* This will initialise the built-in compression algorithms.
-	   The value returned is a STACK_OF(SSL_COMP), but that can
-	   be discarded safely */
-	(void)SSL_COMP_get_compression_methods();
-#endif
 	/* initialize cipher/digest methods table */
 	ssl_load_ciphers();
 	return (1);

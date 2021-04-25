@@ -1,4 +1,4 @@
-/* crypto/conf/conf.c */
+/* $OpenBSD: conf_def.c,v 1.28 2014/07/11 15:38:03 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -60,14 +60,15 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "cryptlib.h"
-#include <openssl/stack.h>
-#include <openssl/lhash.h>
+
+#include <openssl/buffer.h>
 #include <openssl/conf.h>
 #include <openssl/conf_api.h>
-#include "conf_def.h"
-#include <openssl/buffer.h>
 #include <openssl/err.h>
+#include <openssl/lhash.h>
+#include <openssl/stack.h>
+
+#include "conf_def.h"
 
 static char *eat_ws(CONF *conf, char *p);
 static char *eat_alpha_numeric(CONF *conf, char *p);
@@ -87,8 +88,6 @@ static int def_load_bio(CONF *conf, BIO *bp, long *eline);
 static int def_dump(const CONF *conf, BIO *bp);
 static int def_is_number(const CONF *conf, char c);
 static int def_to_int(const CONF *conf, char c);
-
-const char CONF_def_version[]="CONF_def" OPENSSL_VERSION_PTEXT;
 
 static CONF_METHOD default_method = {
 	.name = "OpenSSL default",
@@ -229,7 +228,7 @@ def_load_bio(CONF *conf, BIO *in, long *line)
 		goto err;
 	}
 
-	section = (char *)malloc(10);
+	section = malloc(10);
 	if (section == NULL) {
 		CONFerr(CONF_F_DEF_LOAD_BIO, ERR_R_MALLOC_FAILURE);
 		goto err;
@@ -314,7 +313,7 @@ again:
 			end = eat_alpha_numeric(conf, ss);
 			p = eat_ws(conf, end);
 			if (*p != ']') {
-				if (*p != '\0') {
+				if (*p != '\0' && ss != p) {
 					ss = p;
 					goto again;
 				}
@@ -361,21 +360,20 @@ again:
 			p++;
 			*p = '\0';
 
-			if (!(v = (CONF_VALUE *)malloc(sizeof(CONF_VALUE)))) {
+			if (!(v = malloc(sizeof(CONF_VALUE)))) {
 				CONFerr(CONF_F_DEF_LOAD_BIO,
 				    ERR_R_MALLOC_FAILURE);
 				goto err;
 			}
 			if (psection == NULL)
 				psection = section;
-			v->name = (char *)malloc(strlen(pname) + 1);
+			v->name = strdup(pname);
 			v->value = NULL;
 			if (v->name == NULL) {
 				CONFerr(CONF_F_DEF_LOAD_BIO,
 				    ERR_R_MALLOC_FAILURE);
 				goto err;
 			}
-			strlcpy(v->name, pname, strlen(pname) + 1);
 			if (!str_copy(conf, psection, &(v->value), start))
 				goto err;
 
@@ -416,15 +414,13 @@ again:
 	}
 	if (buff != NULL)
 		BUF_MEM_free(buff);
-	if (section != NULL)
-		free(section);
+	free(section);
 	return (1);
 
 err:
 	if (buff != NULL)
 		BUF_MEM_free(buff);
-	if (section != NULL)
-		free(section);
+	free(section);
 	if (line != NULL)
 		*line = eline;
 	ERR_asprintf_error_data("line %ld", eline);
@@ -433,12 +429,9 @@ err:
 		conf->data = NULL;
 	}
 	if (v != NULL) {
-		if (v->name != NULL)
-			free(v->name);
-		if (v->value != NULL)
-			free(v->value);
-		if (v != NULL)
-			free(v);
+		free(v->name);
+		free(v->value);
+		free(v);
 	}
 	return (0);
 }
@@ -615,8 +608,7 @@ str_copy(CONF *conf, char *section, char **pto, char *from)
 			buf->data[to++] = *(from++);
 	}
 	buf->data[to]='\0';
-	if (*pto != NULL)
-		free(*pto);
+	free(*pto);
 	*pto = buf->data;
 	free(buf);
 	return (1);

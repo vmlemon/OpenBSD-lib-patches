@@ -1,5 +1,4 @@
-/* apps/dh.c */
-/* obsoleted by dhparam.c */
+/* $OpenBSD: dh.c,v 1.25 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,20 +56,23 @@
  * [including the GNU Public Licence.]
  */
 
-#include <openssl/opensslconf.h>/* for OPENSSL_NO_DH */
+#include <openssl/opensslconf.h>	/* for OPENSSL_NO_DH */
+
 #ifndef OPENSSL_NO_DH
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
-#include "apps.h"
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/bn.h>
-#include <openssl/dh.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
+#include <time.h>
 
+#include "apps.h"
+
+#include <openssl/bio.h>
+#include <openssl/bn.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (DER or PEM)
  * -outform arg - output format - default PEM
@@ -95,15 +97,6 @@ dh_main(int argc, char **argv)
 #ifndef OPENSSL_NO_ENGINE
 	char *engine;
 #endif
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 #ifndef OPENSSL_NO_ENGINE
 	engine = NULL;
@@ -251,7 +244,7 @@ bad:
 
 		len = BN_num_bytes(dh->p);
 		bits = BN_num_bits(dh->p);
-		data = (unsigned char *) malloc(len);
+		data = malloc(len);
 		if (data == NULL) {
 			perror("malloc");
 			goto end;
@@ -310,7 +303,7 @@ end:
 		BIO_free_all(out);
 	if (dh != NULL)
 		DH_free(dh);
-	
+
 	return (ret);
 }
 #endif

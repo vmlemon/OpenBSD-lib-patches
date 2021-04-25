@@ -1,4 +1,4 @@
-/* apps/asn1pars.c */
+/* $OpenBSD: asn1pars.c,v 1.27 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -62,12 +62,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
+
 #include "apps.h"
+
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/x509.h>
 #include <openssl/pem.h>
+#include <openssl/x509.h>
 
 /* -inform arg	- input format - default PEM (DER or PEM)
  * -in arg	- input file - default stdin
@@ -76,7 +79,6 @@
  * -length	- how many bytes to use
  * -oid file	- extra oid description file
  */
-
 
 int asn1parse_main(int, char **);
 
@@ -92,6 +94,7 @@ asn1parse_main(int argc, char **argv)
 	int informat, indent = 0, noout = 0, dump = 0;
 	char *infile = NULL, *str = NULL, *prog, *oidfile = NULL, *derfile = NULL;
 	char *genstr = NULL, *genconf = NULL;
+	const char *errstr = NULL;
 	unsigned char *tmpbuf;
 	const unsigned char *ctmpbuf;
 	BUF_MEM *buf = NULL;
@@ -99,15 +102,6 @@ asn1parse_main(int argc, char **argv)
 	ASN1_TYPE *at = NULL;
 
 	informat = FORMAT_PEM;
-
-	signal(SIGPIPE, SIG_IGN);
-
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	prog = argv[0];
 	argc--;
@@ -140,20 +134,22 @@ asn1parse_main(int argc, char **argv)
 		} else if (strcmp(*argv, "-offset") == 0) {
 			if (--argc < 1)
 				goto bad;
-			offset = atoi(*(++argv));
+			offset = strtonum(*(++argv), 0, INT_MAX, &errstr);
+			if (errstr)
+				goto bad;
 		} else if (strcmp(*argv, "-length") == 0) {
 			if (--argc < 1)
 				goto bad;
-			length = atoi(*(++argv));
-			if (length == 0)
+			length = strtonum(*(++argv), 1, UINT_MAX, &errstr);
+			if (errstr)
 				goto bad;
 		} else if (strcmp(*argv, "-dump") == 0) {
 			dump = -1;
 		} else if (strcmp(*argv, "-dlimit") == 0) {
 			if (--argc < 1)
 				goto bad;
-			dump = atoi(*(++argv));
-			if (dump <= 0)
+			dump = strtonum(*(++argv), 1, INT_MAX, &errstr);
+			if (errstr)
 				goto bad;
 		} else if (strcmp(*argv, "-strparse") == 0) {
 			if (--argc < 1)
@@ -274,11 +270,12 @@ bad:
 		for (i = 0; i < sk_OPENSSL_STRING_num(osk); i++) {
 			ASN1_TYPE *atmp;
 			int typ;
-			j = atoi(sk_OPENSSL_STRING_value(osk, i));
-			if (j == 0) {
+			j = strtonum(sk_OPENSSL_STRING_value(osk, i),
+			    1, INT_MAX, &errstr);
+			if (errstr) {
 				BIO_printf(bio_err,
-				    "'%s' is an invalid number\n",
-				    sk_OPENSSL_STRING_value(osk, i));
+				    "'%s' is an invalid number: %s\n",
+				    sk_OPENSSL_STRING_value(osk, i), errstr);
 				continue;
 			}
 			tmpbuf += j;
@@ -346,7 +343,7 @@ end:
 	if (osk != NULL)
 		sk_OPENSSL_STRING_free(osk);
 	OBJ_cleanup();
-	
+
 	return (ret);
 }
 

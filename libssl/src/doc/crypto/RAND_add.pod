@@ -20,11 +20,11 @@ These functions used to allow for the state of the random number generator
 to be controlled by external sources.
 
 They are kept for ABI compatibility but are no longer functional, and
-should not used in new programs.
+should not be used in new programs.
 
 =head1 SEE ALSO
 
-L<rand(3)|rand(3)>, L<RAND_egd(3)|RAND_egd(3)>,
+L<rand(3)|rand(3)>,
 L<RAND_load_file(3)|RAND_load_file(3)>, L<RAND_cleanup(3)|RAND_cleanup(3)>
 
 =cut

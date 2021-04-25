@@ -1,4 +1,4 @@
-/* crypto/cryptlib.h */
+/* $OpenBSD: cryptlib.h,v 1.24 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -59,15 +59,6 @@
 #ifndef HEADER_CRYPTLIB_H
 #define HEADER_CRYPTLIB_H
 
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <openssl/crypto.h>
-#include <openssl/buffer.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
 #include <openssl/opensslconf.h>
 
 #ifdef  __cplusplus
@@ -81,15 +72,8 @@ extern "C" {
 #define X509_CERT_DIR_EVP        "SSL_CERT_DIR"
 #define X509_CERT_FILE_EVP       "SSL_CERT_FILE"
 
-/* size of string representations */
-#define DECIMAL_SIZE(type)	((sizeof(type)*8+2)/3+1)
-#define HEX_SIZE(type)		(sizeof(type)*2)
-
 void OPENSSL_cpuid_setup(void);
 extern unsigned int OPENSSL_ia32cap_P[];
-void OPENSSL_showfatal(const char *fmta,...);
-void *OPENSSL_stderr(void);
-extern int OPENSSL_NONPIC_relocated;
 
 #ifdef  __cplusplus
 }

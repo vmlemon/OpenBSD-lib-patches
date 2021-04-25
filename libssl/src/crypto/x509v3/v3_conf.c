@@ -1,4 +1,4 @@
-/* v3_conf.c */
+/* $OpenBSD: v3_conf.c,v 1.15 2014/07/11 08:44:49 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -57,11 +57,12 @@
  */
 /* extension creation utilities */
 
-
-#include <stdio.h>
 #include <ctype.h>
-#include "cryptlib.h"
+#include <stdio.h>
+#include <string.h>
+
 #include <openssl/conf.h>
+#include <openssl/err.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
@@ -313,8 +314,7 @@ v3_generic_extension(const char *ext, char *value, int crit, int gen_type,
 err:
 	ASN1_OBJECT_free(obj);
 	M_ASN1_OCTET_STRING_free(oct);
-	if (ext_der)
-		free(ext_der);
+	free(ext_der);
 	return extension;
 }
 

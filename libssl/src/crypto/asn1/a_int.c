@@ -1,4 +1,4 @@
-/* crypto/asn1/a_int.c */
+/* $OpenBSD: a_int.c,v 1.24 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,11 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+#include <string.h>
+
 #include <openssl/asn1.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
 
 ASN1_INTEGER *
 ASN1_INTEGER_dup(const ASN1_INTEGER *x)
@@ -159,7 +161,7 @@ i2c_ASN1_INTEGER(ASN1_INTEGER *a, unsigned char **pp)
 	if (a->length == 0)
 		*(p++) = 0;
 	else if (!neg)
-		memcpy(p, a->data, (unsigned int)a->length);
+		memcpy(p, a->data, a->length);
 	else {
 		/* Begin at the end of the encoding */
 		n = a->data + a->length - 1;
@@ -200,12 +202,12 @@ c2i_ASN1_INTEGER(ASN1_INTEGER **a, const unsigned char **pp, long len)
 	} else
 		ret = (*a);
 
-	p= *pp;
+	p = *pp;
 	pend = p + len;
 
 	/* We must malloc stuff, even for 0 bytes otherwise it
 	 * signifies a missing NULL parameter. */
-	s = malloc((int)len + 1);
+	s = malloc(len + 1);
 	if (s == NULL) {
 		i = ERR_R_MALLOC_FAILURE;
 		goto err;
@@ -253,11 +255,10 @@ c2i_ASN1_INTEGER(ASN1_INTEGER **a, const unsigned char **pp, long len)
 			p++;
 			len--;
 		}
-		memcpy(s, p, (int)len);
+		memcpy(s, p, len);
 	}
 
-	if (ret->data != NULL)
-		free(ret->data);
+	free(ret->data);
 	ret->data = s;
 	ret->length = (int)len;
 	if (a != NULL)
@@ -320,12 +321,11 @@ d2i_ASN1_UINTEGER(ASN1_INTEGER **a, const unsigned char **pp, long length)
 			p++;
 			len--;
 		}
-		memcpy(s, p, (int)len);
+		memcpy(s, p, len);
 		p += len;
 	}
 
-	if (ret->data != NULL)
-		free(ret->data);
+	free(ret->data);
 	ret->data = s;
 	ret->length = (int)len;
 	if (a != NULL)
@@ -349,9 +349,9 @@ ASN1_INTEGER_set(ASN1_INTEGER *a, long v)
 	long d;
 
 	a->type = V_ASN1_INTEGER;
+	/* XXX ssl/ssl_asn1.c:i2d_SSL_SESSION() depends upon this bound vae */
 	if (a->length < (int)(sizeof(long) + 1)) {
-		if (a->data != NULL)
-			free(a->data);
+		free(a->data);
 		a->data = calloc(1, sizeof(long) + 1);
 	}
 	if (a->data == NULL) {

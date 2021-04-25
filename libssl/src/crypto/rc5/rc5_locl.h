@@ -1,4 +1,4 @@
-/* crypto/rc5/rc5_locl.h */
+/* $OpenBSD: rc5_locl.h,v 1.5 2014/07/10 22:45:57 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,6 +57,8 @@
  */
 
 #include <stdlib.h>
+
+#include <openssl/opensslconf.h>
 
 #undef c2l
 #define c2l(c,l)	(l =((unsigned long)(*((c)++)))    , \

@@ -1,5 +1,4 @@
-/* apps/gendh.c */
-/* obsoleted by dhparam.c */
+/* $OpenBSD: gendh.c,v 1.28 2014/07/14 00:35:10 deraadt Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -58,6 +57,7 @@
  */
 
 #include <openssl/opensslconf.h>
+
 /* Until the key-gen callbacks are modified to use newer prototypes, we allow
  * deprecated functions for openssl-internal code */
 #ifdef OPENSSL_NO_DEPRECATED
@@ -65,18 +65,22 @@
 #endif
 
 #ifndef OPENSSL_NO_DH
-#include <stdio.h>
-#include <string.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include <stdio.h>
+#include <string.h>
+
 #include "apps.h"
+
 #include <openssl/bio.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/dh.h>
-#include <openssl/x509.h>
+#include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
+#include <openssl/x509.h>
 
 #define DEFBITS	512
 
@@ -92,21 +96,12 @@ gendh_main(int argc, char **argv)
 	int ret = 1, num = DEFBITS;
 	int g = 2;
 	char *outfile = NULL;
-	char *inrand = NULL;
 #ifndef OPENSSL_NO_ENGINE
 	char *engine = NULL;
 #endif
 	BIO *out = NULL;
 
-	signal(SIGPIPE, SIG_IGN);
-
 	BN_GENCB_set(&cb, dh_cb, bio_err);
-	if (bio_err == NULL)
-		if ((bio_err = BIO_new(BIO_s_file())) != NULL)
-			BIO_set_fp(bio_err, stderr, BIO_NOCLOSE | BIO_FP_TEXT);
-
-	if (!load_config(bio_err, NULL))
-		goto end;
 
 	argv++;
 	argc--;
@@ -131,11 +126,7 @@ gendh_main(int argc, char **argv)
 			engine = *(++argv);
 		}
 #endif
-		else if (strcmp(*argv, "-rand") == 0) {
-			if (--argc < 1)
-				goto bad;
-			inrand = *(++argv);
-		} else
+		else
 			break;
 		argv++;
 		argc--;
@@ -153,9 +144,6 @@ bad:
 #ifndef OPENSSL_NO_ENGINE
 		BIO_printf(bio_err, " -engine e - use engine e, possibly a hardware device.\n");
 #endif
-		BIO_printf(bio_err, " -rand file:file:...\n");
-		BIO_printf(bio_err, "           - load the file (or the files in the directory) into\n");
-		BIO_printf(bio_err, "             the random number generator\n");
 		goto end;
 	}
 #ifndef OPENSSL_NO_ENGINE
@@ -192,7 +180,7 @@ end:
 		BIO_free_all(out);
 	if (dh != NULL)
 		DH_free(dh);
-	
+
 	return (ret);
 }
 

@@ -1,4 +1,4 @@
-/* crypto/asn1/a_enum.c */
+/* $OpenBSD: a_enum.c,v 1.15 2014/07/11 08:44:47 jsing Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -57,9 +57,10 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
+
 #include <openssl/asn1.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
 
 /*
  * Code for ENUMERATED type: identical to INTEGER apart from a different tag.
@@ -76,8 +77,7 @@ ASN1_ENUMERATED_set(ASN1_ENUMERATED *a, long v)
 
 	a->type = V_ASN1_ENUMERATED;
 	if (a->length < (int)(sizeof(long) + 1)) {
-		if (a->data != NULL)
-			free(a->data);
+		free(a->data);
 		a->data = calloc(1, sizeof(long) + 1);
 	}
 	if (a->data == NULL) {

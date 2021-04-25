@@ -1,4 +1,4 @@
-/* crypto/asn1/a_time.c */
+/* $OpenBSD: a_time.c,v 1.21 2014/07/11 08:44:47 jsing Exp $ */
 /* ====================================================================
  * Copyright (c) 1999 The OpenSSL Project.  All rights reserved.
  *
@@ -53,7 +53,6 @@
  *
  */
 
-
 /* This is an implementation of the ASN1 Time structure which is:
  *    Time ::= CHOICE {
  *      utcTime        UTCTime,
@@ -62,10 +61,13 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
-#include "cryptlib.h"
-#include "o_time.h"
+
 #include <openssl/asn1t.h>
+#include <openssl/err.h>
+
+#include "o_time.h"
 
 IMPLEMENT_ASN1_MSTRING(ASN1_TIME, B_ASN1_TIME)
 
@@ -120,8 +122,8 @@ ASN1_TIME_check(ASN1_TIME *t)
 }
 
 /* Convert an ASN1_TIME structure to GeneralizedTime */
-ASN1_GENERALIZEDTIME *
-ASN1_TIME_to_generalizedtime(ASN1_TIME *t, ASN1_GENERALIZEDTIME **out)
+static ASN1_GENERALIZEDTIME *
+ASN1_TIME_to_generalizedtime_internal(ASN1_TIME *t, ASN1_GENERALIZEDTIME **out)
 {
 	ASN1_GENERALIZEDTIME *ret;
 	char *str;
@@ -131,13 +133,7 @@ ASN1_TIME_to_generalizedtime(ASN1_TIME *t, ASN1_GENERALIZEDTIME **out)
 	if (!ASN1_TIME_check(t))
 		return NULL;
 
-	if (!out || !*out) {
-		if (!(ret = ASN1_GENERALIZEDTIME_new ()))
-			return NULL;
-		if (out)
-			*out = ret;
-	} else
-		ret = *out;
+	ret = *out;
 
 	/* If already GeneralizedTime just copy across */
 	if (t->type == V_ASN1_GENERALIZEDTIME) {
@@ -152,12 +148,35 @@ ASN1_TIME_to_generalizedtime(ASN1_TIME *t, ASN1_GENERALIZEDTIME **out)
 	/* ASN1_STRING_set() allocated 'len + 1' bytes. */
 	newlen = t->length + 2 + 1;
 	str = (char *)ret->data;
+	/* XXX ASN1_TIME is not Y2050 compatible */
 	i = snprintf(str, newlen, "%s%s", (t->data[0] >= '5') ? "19" : "20",
 	    (char *) t->data);
 	if (i == -1 || i >= newlen) {
-		ASN1_STRING_free(ret);
+		M_ASN1_GENERALIZEDTIME_free(ret);
+		*out = NULL;
 		return NULL;
 	}
+	return ret;
+}
+
+ASN1_GENERALIZEDTIME *
+ASN1_TIME_to_generalizedtime(ASN1_TIME *t, ASN1_GENERALIZEDTIME **out)
+{
+	ASN1_GENERALIZEDTIME *tmp = NULL, *ret;
+
+	if (!out || !*out) {
+		if (!(tmp = ASN1_GENERALIZEDTIME_new()))
+			return NULL;
+		if (out != NULL)
+			*out = tmp;
+		else
+			out = &tmp;
+	}
+
+	ret = ASN1_TIME_to_generalizedtime_internal(t, out);
+	if (ret == NULL && tmp != NULL)
+		ASN1_GENERALIZEDTIME_free(tmp);
+
 	return ret;
 }
 

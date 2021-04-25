@@ -1,4 +1,4 @@
-/* t_x509a.c */
+/* $OpenBSD: t_x509a.c,v 1.8 2014/07/11 08:44:47 jsing Exp $ */
 /* Written by Dr Stephen N Henson (steve@openssl.org) for the OpenSSL
  * project 1999.
  */
@@ -57,9 +57,9 @@
  */
 
 #include <stdio.h>
-#include "cryptlib.h"
-#include <openssl/evp.h>
+
 #include <openssl/asn1.h>
+#include <openssl/evp.h>
 #include <openssl/x509.h>
 
 /* X509_CERT_AUX and string set routines

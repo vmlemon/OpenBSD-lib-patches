@@ -1,4 +1,4 @@
-/* ssl/d1_srvr.c */
+/* $OpenBSD: d1_srvr.c,v 1.33 2014/07/12 22:33:39 jsing Exp $ */
 /* 
  * DTLS implementation written by Nagendra Modadugu
  * (nagendra@cs.stanford.edu) for the OpenSSL project 2005.  
@@ -122,12 +122,48 @@
 #include <openssl/x509.h>
 #include <openssl/md5.h>
 #include <openssl/bn.h>
-#ifndef OPENSSL_NO_DH
 #include <openssl/dh.h>
-#endif
 
 static const SSL_METHOD *dtls1_get_server_method(int ver);
 static int dtls1_send_hello_verify_request(SSL *s);
+
+const SSL_METHOD DTLSv1_server_method_data = {
+	.version = DTLS1_VERSION,
+	.ssl_new = dtls1_new,
+	.ssl_clear = dtls1_clear,
+	.ssl_free = dtls1_free,
+	.ssl_accept = dtls1_accept,
+	.ssl_connect = ssl_undefined_function,
+	.ssl_read = ssl3_read,
+	.ssl_peek = ssl3_peek,
+	.ssl_write = ssl3_write,
+	.ssl_shutdown = dtls1_shutdown,
+	.ssl_renegotiate = ssl3_renegotiate,
+	.ssl_renegotiate_check = ssl3_renegotiate_check,
+	.ssl_get_message = dtls1_get_message,
+	.ssl_read_bytes = dtls1_read_bytes,
+	.ssl_write_bytes = dtls1_write_app_data_bytes,
+	.ssl_dispatch_alert = dtls1_dispatch_alert,
+	.ssl_ctrl = dtls1_ctrl,
+	.ssl_ctx_ctrl = ssl3_ctx_ctrl,
+	.get_cipher_by_char = ssl3_get_cipher_by_char,
+	.put_cipher_by_char = ssl3_put_cipher_by_char,
+	.ssl_pending = ssl3_pending,
+	.num_ciphers = ssl3_num_ciphers,
+	.get_cipher = dtls1_get_cipher,
+	.get_ssl_method = dtls1_get_server_method,
+	.get_timeout = dtls1_default_timeout,
+	.ssl3_enc = &DTLSv1_enc_data,
+	.ssl_version = ssl_undefined_void_function,
+	.ssl_callback_ctrl = ssl3_callback_ctrl,
+	.ssl_ctx_callback_ctrl = ssl3_ctx_callback_ctrl,
+};
+
+const SSL_METHOD *
+DTLSv1_server_method(void)
+{
+	return &DTLSv1_server_method_data;
+}
 
 static const SSL_METHOD *
 dtls1_get_server_method(int ver)
@@ -137,13 +173,9 @@ dtls1_get_server_method(int ver)
 	return (NULL);
 }
 
-IMPLEMENT_dtls1_meth_func(DTLSv1_server_method,
-    dtls1_accept, ssl_undefined_function, dtls1_get_server_method)
-
 int
 dtls1_accept(SSL *s)
 {
-	BUF_MEM *buf;
 	void (*cb)(const SSL *ssl, int type, int val) = NULL;
 	unsigned long alg_k;
 	int ret = -1;
@@ -208,11 +240,13 @@ dtls1_accept(SSL *s)
 			s->type = SSL_ST_ACCEPT;
 
 			if (s->init_buf == NULL) {
+				BUF_MEM *buf;
 				if ((buf = BUF_MEM_new()) == NULL) {
 					ret = -1;
 					goto end;
 				}
 				if (!BUF_MEM_grow(buf, SSL3_RT_MAX_PLAIN_LENGTH)) {
+					BUF_MEM_free(buf);
 					ret = -1;
 					goto end;
 				}
@@ -382,14 +416,10 @@ dtls1_accept(SSL *s)
 				    BIO_CTRL_DGRAM_SCTP_ADD_AUTH_KEY,
 				    sizeof(sctpauthkey), sctpauthkey);
 #endif
-#ifndef OPENSSL_NO_TLSEXT
 				if (s->tlsext_ticket_expected)
 					s->state = SSL3_ST_SW_SESSION_TICKET_A;
 				else
 					s->state = SSL3_ST_SW_CHANGE_A;
-#else
-				s->state = SSL3_ST_SW_CHANGE_A;
-#endif
 			} else
 				s->state = SSL3_ST_SW_CERT_A;
 			s->init_num = 0;
@@ -397,14 +427,13 @@ dtls1_accept(SSL *s)
 
 		case SSL3_ST_SW_CERT_A:
 		case SSL3_ST_SW_CERT_B:
-			/* Check if it is anon DH or normal PSK */
-			if (!(s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL) &&
-			    !(s->s3->tmp.new_cipher->algorithm_mkey & SSL_kPSK)) {
+			/* Check if it is anon DH. */
+			if (!(s->s3->tmp.new_cipher->algorithm_auth &
+			    SSL_aNULL)) {
 				dtls1_start_timer(s);
 				ret = dtls1_send_server_certificate(s);
 				if (ret <= 0)
 					goto end;
-#ifndef OPENSSL_NO_TLSEXT
 				if (s->tlsext_status_expected)
 					s->state = SSL3_ST_SW_CERT_STATUS_A;
 				else
@@ -413,12 +442,6 @@ dtls1_accept(SSL *s)
 				skip = 1;
 				s->state = SSL3_ST_SW_KEY_EXCH_A;
 			}
-#else
-			} else
-				skip = 1;
-
-			s->state = SSL3_ST_SW_KEY_EXCH_A;
-#endif
 			s->init_num = 0;
 			break;
 
@@ -429,9 +452,6 @@ dtls1_accept(SSL *s)
 			/* clear this, it may get reset by
 			 * send_server_key_exchange */
 			if ((s->options & SSL_OP_EPHEMERAL_RSA)
-#ifndef OPENSSL_NO_KRB5
-			&& !(alg_k & SSL_kKRB5)
-#endif /* OPENSSL_NO_KRB5 */
 			)
 				/* option SSL_OP_EPHEMERAL_RSA sends temporary RSA key
 				 * even when forbidden by protocol specs
@@ -444,18 +464,10 @@ dtls1_accept(SSL *s)
 			/* only send if a DH key exchange or
 			 * RSA but we have a sign only certificate */
 			if (s->s3->tmp.use_rsa_tmp
-			/* PSK: send ServerKeyExchange if PSK identity
-			 * hint if provided */
-#ifndef OPENSSL_NO_PSK
-			|| ((alg_k & SSL_kPSK) && s->ctx->psk_identity_hint)
-#endif
-			|| (alg_k & (SSL_kEDH|SSL_kDHr|SSL_kDHd))
-			|| (alg_k & SSL_kEECDH)
+			|| (alg_k & (SSL_kDHE|SSL_kDHr|SSL_kDHd))
+			|| (alg_k & SSL_kECDHE)
 			|| ((alg_k & SSL_kRSA)
 			&& (s->cert->pkeys[SSL_PKEY_RSA_ENC].privatekey == NULL
-			|| (SSL_C_IS_EXPORT(s->s3->tmp.new_cipher)
-			&& EVP_PKEY_size(s->cert->pkeys[SSL_PKEY_RSA_ENC].privatekey)*8 > SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher)
-			)
 			)
 			)
 			) {
@@ -472,24 +484,29 @@ dtls1_accept(SSL *s)
 
 		case SSL3_ST_SW_CERT_REQ_A:
 		case SSL3_ST_SW_CERT_REQ_B:
-			if (/* don't request cert unless asked for it: */
-			    !(s->verify_mode & SSL_VERIFY_PEER) ||
-				/* if SSL_VERIFY_CLIENT_ONCE is set,
-				 * don't request cert during re-negotiation: */
+			/*
+			 * Determine whether or not we need to request a
+			 * certificate.
+			 *
+			 * Do not request a certificate if:
+			 *
+			 * - We did not ask for it (SSL_VERIFY_PEER is unset).
+			 *
+			 * - SSL_VERIFY_CLIENT_ONCE is set and we are
+			 *   renegotiating.
+			 *
+			 * - We are using an anonymous ciphersuites
+			 *   (see section "Certificate request" in SSL 3 drafts
+			 *   and in RFC 2246) ... except when the application
+			 *   insists on verification (against the specs, but
+			 *   s3_clnt.c accepts this for SSL 3).
+			 */
+			if (!(s->verify_mode & SSL_VERIFY_PEER) ||
 			    ((s->session->peer != NULL) &&
-			    (s->verify_mode & SSL_VERIFY_CLIENT_ONCE)) ||
-				/* never request cert in anonymous ciphersuites
-				 * (see section "Certificate request" in SSL 3 drafts
-				 * and in RFC 2246): */
-			    ((s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL) &&
-				 /* ... except when the application insists on verification
-				  * (against the specs, but s3_clnt.c accepts this for SSL 3) */
-			    !(s->verify_mode & SSL_VERIFY_FAIL_IF_NO_PEER_CERT)) ||
-				/* never request cert in Kerberos ciphersuites */
-			    (s->s3->tmp.new_cipher->algorithm_auth & SSL_aKRB5)
-				/* With normal PSK Certificates and
-				 * Certificate Requests are omitted */
-			    || (s->s3->tmp.new_cipher->algorithm_mkey & SSL_kPSK)) {
+			     (s->verify_mode & SSL_VERIFY_CLIENT_ONCE)) ||
+			    ((s->s3->tmp.new_cipher->algorithm_auth &
+			     SSL_aNULL) && !(s->verify_mode &
+			     SSL_VERIFY_FAIL_IF_NO_PEER_CERT))) {
 				/* no cert request */
 				skip = 1;
 				s->s3->tmp.cert_request = 0;
@@ -650,16 +667,13 @@ dtls1_accept(SSL *s)
 			dtls1_stop_timer(s);
 			if (s->hit)
 				s->state = SSL_ST_OK;
-#ifndef OPENSSL_NO_TLSEXT
 			else if (s->tlsext_ticket_expected)
 				s->state = SSL3_ST_SW_SESSION_TICKET_A;
-#endif
 			else
 				s->state = SSL3_ST_SW_CHANGE_A;
 			s->init_num = 0;
 			break;
 
-#ifndef OPENSSL_NO_TLSEXT
 		case SSL3_ST_SW_SESSION_TICKET_A:
 		case SSL3_ST_SW_SESSION_TICKET_B:
 			ret = dtls1_send_newsession_ticket(s);
@@ -678,7 +692,6 @@ dtls1_accept(SSL *s)
 			s->init_num = 0;
 			break;
 
-#endif
 
 		case SSL3_ST_SW_CHANGE_A:
 		case SSL3_ST_SW_CHANGE_B:
@@ -751,11 +764,6 @@ dtls1_accept(SSL *s)
 		case SSL_ST_OK:
 			/* clean a few things up */
 			ssl3_cleanup_key_block(s);
-
-#if 0
-			BUF_MEM_free(s->init_buf);
-			s->init_buf = NULL;
-#endif
 
 			/* remove buffering on output */
 			ssl_free_wbio_buffer(s);
@@ -899,7 +907,8 @@ dtls1_send_server_hello(SSL *s)
 	if (s->state == SSL3_ST_SW_SRVR_HELLO_A) {
 		buf = (unsigned char *)s->init_buf->data;
 		p = s->s3->server_random;
-		ssl_fill_hello_random(s, 1, p, SSL3_RANDOM_SIZE);
+		RAND_pseudo_bytes(p, SSL3_RANDOM_SIZE);
+
 		/* Do the message type and length last */
 		d = p= &(buf[DTLS1_HM_HEADER_LENGTH]);
 
@@ -937,21 +946,12 @@ dtls1_send_server_hello(SSL *s)
 		p += i;
 
 		/* put the compression method */
-#ifdef OPENSSL_NO_COMP
 		*(p++) = 0;
-#else
-		if (s->s3->tmp.new_compression == NULL)
-			*(p++) = 0;
-		else
-			*(p++) = s->s3->tmp.new_compression->id;
-#endif
 
-#ifndef OPENSSL_NO_TLSEXT
 		if ((p = ssl_add_serverhello_tlsext(s, p, buf + SSL3_RT_MAX_PLAIN_LENGTH)) == NULL) {
 			SSLerr(SSL_F_DTLS1_SEND_SERVER_HELLO, ERR_R_INTERNAL_ERROR);
 			return -1;
 		}
-#endif
 
 		/* do the header */
 		l = (p - d);
@@ -1004,20 +1004,13 @@ dtls1_send_server_key_exchange(SSL *s)
 	RSA *rsa;
 	unsigned char md_buf[MD5_DIGEST_LENGTH + SHA_DIGEST_LENGTH];
 	unsigned int u;
-#ifndef OPENSSL_NO_DH
 	DH *dh = NULL, *dhp;
-#endif
-#ifndef OPENSSL_NO_ECDH
 	EC_KEY *ecdh = NULL, *ecdhp;
 	unsigned char *encodedPoint = NULL;
 	int encodedlen = 0;
 	int curve_id = 0;
 	BN_CTX *bn_ctx = NULL;
 
-#endif
-#ifndef OPENSSL_NO_PSK
-	size_t pskhintlen = 0;
-#endif
 	EVP_PKEY *pkey;
 	unsigned char *p, *d;
 	int al, i;
@@ -1041,9 +1034,7 @@ dtls1_send_server_key_exchange(SSL *s)
 		if (type & SSL_kRSA) {
 			rsa = cert->rsa_tmp;
 			if ((rsa == NULL) && (s->cert->rsa_tmp_cb != NULL)) {
-				rsa = s->cert->rsa_tmp_cb(s,
-				SSL_C_IS_EXPORT(s->s3->tmp.new_cipher),
-				SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher));
+				rsa = s->cert->rsa_tmp_cb(s, 0, 0);
 				if (rsa == NULL) {
 					al = SSL_AD_HANDSHAKE_FAILURE;
 					SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, SSL_R_ERROR_GENERATING_TMP_RSA_KEY);
@@ -1061,13 +1052,10 @@ dtls1_send_server_key_exchange(SSL *s)
 			r[1] = rsa->e;
 			s->s3->tmp.use_rsa_tmp = 1;
 		} else
-#ifndef OPENSSL_NO_DH
-		if (type & SSL_kEDH) {
+		if (type & SSL_kDHE) {
 			dhp = cert->dh_tmp;
 			if ((dhp == NULL) && (s->cert->dh_tmp_cb != NULL))
-				dhp = s->cert->dh_tmp_cb(s,
-				    SSL_C_IS_EXPORT(s->s3->tmp.new_cipher),
-				    SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher));
+				dhp = s->cert->dh_tmp_cb(s, 0, 0);
 			if (dhp == NULL) {
 				al = SSL_AD_HANDSHAKE_FAILURE;
 				SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, SSL_R_MISSING_TMP_DH_KEY);
@@ -1106,17 +1094,12 @@ dtls1_send_server_key_exchange(SSL *s)
 			r[1] = dh->g;
 			r[2] = dh->pub_key;
 		} else
-#endif
-#ifndef OPENSSL_NO_ECDH
-		if (type & SSL_kEECDH) {
+		if (type & SSL_kECDHE) {
 			const EC_GROUP *group;
 
 			ecdhp = cert->ecdh_tmp;
-			if ((ecdhp == NULL) && (s->cert->ecdh_tmp_cb != NULL)) {
-				ecdhp = s->cert->ecdh_tmp_cb(s,
-				SSL_C_IS_EXPORT(s->s3->tmp.new_cipher),
-				SSL_C_EXPORT_PKEYLENGTH(s->s3->tmp.new_cipher));
-			}
+			if (ecdhp == NULL && s->cert->ecdh_tmp_cb != NULL)
+				ecdhp = s->cert->ecdh_tmp_cb(s, 0, 0);
 			if (ecdhp == NULL) {
 				al = SSL_AD_HANDSHAKE_FAILURE;
 				SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, SSL_R_MISSING_TMP_ECDH_KEY);
@@ -1154,12 +1137,6 @@ dtls1_send_server_key_exchange(SSL *s)
 			    (EC_KEY_get0_public_key(ecdh)  == NULL) ||
 			    (EC_KEY_get0_private_key(ecdh) == NULL)) {
 				SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, ERR_R_ECDH_LIB);
-				goto err;
-			}
-
-			if (SSL_C_IS_EXPORT(s->s3->tmp.new_cipher) &&
-			    (EC_GROUP_get_degree(group) > 163)) {
-				SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, SSL_R_ECGROUP_TOO_LARGE_FOR_CIPHER);
 				goto err;
 			}
 
@@ -1220,14 +1197,6 @@ dtls1_send_server_key_exchange(SSL *s)
 			r[2] = NULL;
 			r[3] = NULL;
 		} else
-#endif /* !OPENSSL_NO_ECDH */
-#ifndef OPENSSL_NO_PSK
-		if (type & SSL_kPSK) {
-			pskhintlen = strlen(s->ctx->psk_identity_hint);
-			/* reserve size for record length and PSK identity hint*/
-			n += 2 + pskhintlen;
-		} else
-#endif /* !OPENSSL_NO_PSK */
 		{
 			al = SSL_AD_HANDSHAKE_FAILURE;
 			SSLerr(SSL_F_DTLS1_SEND_SERVER_KEY_EXCHANGE, SSL_R_UNKNOWN_KEY_EXCHANGE_TYPE);
@@ -1238,8 +1207,7 @@ dtls1_send_server_key_exchange(SSL *s)
 			n += 2 + nr[i];
 		}
 
-		if (!(s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL)
-		    && !(s->s3->tmp.new_cipher->algorithm_mkey & SSL_kPSK)) {
+		if (!(s->s3->tmp.new_cipher->algorithm_auth & SSL_aNULL)) {
 			if ((pkey = ssl_get_sign_pkey(s,
 			    s->s3->tmp.new_cipher, NULL)) == NULL) {
 				al = SSL_AD_DECODE_ERROR;
@@ -1264,8 +1232,7 @@ dtls1_send_server_key_exchange(SSL *s)
 			p += nr[i];
 		}
 
-#ifndef OPENSSL_NO_ECDH
-		if (type & SSL_kEECDH) {
+		if (type & SSL_kECDHE) {
 			/* XXX: For now, we only support named (not generic) curves.
 			 * In this situation, the serverKeyExchange message has:
 			 * [1 byte CurveType], [2 byte CurveName]
@@ -1281,23 +1248,12 @@ dtls1_send_server_key_exchange(SSL *s)
 			*p = encodedlen;
 			p += 1;
 			memcpy((unsigned char*)p,
-			(unsigned char *)encodedPoint,
-			encodedlen);
+			    (unsigned char *)encodedPoint, encodedlen);
 			free(encodedPoint);
 			encodedPoint = NULL;
 			p += encodedlen;
 		}
-#endif
 
-#ifndef OPENSSL_NO_PSK
-		if (type & SSL_kPSK) {
-			/* copy PSK identity hint */
-			s2n(pskhintlen, p);
-
-			memcpy(p, s->ctx->psk_identity_hint, pskhintlen);
-			p += pskhintlen;
-		}
-#endif
 
 		/* not anonymous */
 		if (pkey != NULL) {
@@ -1345,7 +1301,6 @@ dtls1_send_server_key_exchange(SSL *s)
 				s2n(i, p);
 				n += i + 2;
 			} else
-#if !defined(OPENSSL_NO_ECDSA)
 			if (pkey->type == EVP_PKEY_EC) {
 				/* let's do ECDSA */
 				EVP_SignInit_ex(&md_ctx, EVP_ecdsa(), NULL);
@@ -1360,7 +1315,6 @@ dtls1_send_server_key_exchange(SSL *s)
 				s2n(i, p);
 				n += i + 2;
 			} else
-#endif
 			{
 				/* Is this error check actually needed? */
 				al = SSL_AD_HANDSHAKE_FAILURE;
@@ -1387,10 +1341,8 @@ dtls1_send_server_key_exchange(SSL *s)
 f_err:
 	ssl3_send_alert(s, SSL3_AL_FATAL, al);
 err:
-#ifndef OPENSSL_NO_ECDH
 	free(encodedPoint);
 	BN_CTX_free(bn_ctx);
-#endif
 	EVP_MD_CTX_cleanup(&md_ctx);
 	return (-1);
 }
@@ -1501,12 +1453,9 @@ dtls1_send_server_certificate(SSL *s)
 	if (s->state == SSL3_ST_SW_CERT_A) {
 		x = ssl_get_server_send_cert(s);
 		if (x == NULL) {
-			/* VRS: allow null cert if auth == KRB5 */
-			if ((s->s3->tmp.new_cipher->algorithm_mkey != SSL_kKRB5) ||
-				(s->s3->tmp.new_cipher->algorithm_auth != SSL_aKRB5)) {
-				SSLerr(SSL_F_DTLS1_SEND_SERVER_CERTIFICATE, ERR_R_INTERNAL_ERROR);
-				return (0);
-			}
+			SSLerr(SSL_F_DTLS1_SEND_SERVER_CERTIFICATE,
+			    ERR_R_INTERNAL_ERROR);
+			return (0);
 		}
 
 		l = dtls1_output_cert_chain(s, x);
@@ -1522,7 +1471,6 @@ dtls1_send_server_certificate(SSL *s)
 	return (dtls1_do_write(s, SSL3_RT_HANDSHAKE));
 }
 
-#ifndef OPENSSL_NO_TLSEXT
 int
 dtls1_send_newsession_ticket(SSL *s)
 {
@@ -1569,7 +1517,7 @@ dtls1_send_newsession_ticket(SSL *s)
 		 */
 		if (tctx->tlsext_ticket_key_cb) {
 			if (tctx->tlsext_ticket_key_cb(s, key_name, iv, &ctx,
-				&hctx, 1) < 0) {
+			    &hctx, 1) < 0) {
 				free(senc);
 				return -1;
 			}
@@ -1628,4 +1576,3 @@ dtls1_send_newsession_ticket(SSL *s)
 	/* SSL3_ST_SW_SESSION_TICKET_B */
 	return (dtls1_do_write(s, SSL3_RT_HANDSHAKE));
 }
-#endif

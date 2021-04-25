@@ -1,4 +1,4 @@
-/* ssl/s23_clnt.c */
+/* $OpenBSD: s23_clnt.c,v 1.31 2014/07/11 08:17:36 miod Exp $ */
 /* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -119,6 +119,45 @@
 static const SSL_METHOD *ssl23_get_client_method(int ver);
 static int ssl23_client_hello(SSL *s);
 static int ssl23_get_server_hello(SSL *s);
+
+const SSL_METHOD SSLv23_client_method_data = {
+	.version = TLS1_2_VERSION,
+	.ssl_new = tls1_new,
+	.ssl_clear = tls1_clear,
+	.ssl_free = tls1_free,
+	.ssl_accept = ssl_undefined_function,
+	.ssl_connect = ssl23_connect,
+	.ssl_read = ssl23_read,
+	.ssl_peek = ssl23_peek,
+	.ssl_write = ssl23_write,
+	.ssl_shutdown = ssl_undefined_function,
+	.ssl_renegotiate = ssl_undefined_function,
+	.ssl_renegotiate_check = ssl_ok,
+	.ssl_get_message = ssl3_get_message,
+	.ssl_read_bytes = ssl3_read_bytes,
+	.ssl_write_bytes = ssl3_write_bytes,
+	.ssl_dispatch_alert = ssl3_dispatch_alert,
+	.ssl_ctrl = ssl3_ctrl,
+	.ssl_ctx_ctrl = ssl3_ctx_ctrl,
+	.get_cipher_by_char = ssl3_get_cipher_by_char,
+	.put_cipher_by_char = ssl23_put_cipher_by_char,
+	.ssl_pending = ssl_undefined_const_function,
+	.num_ciphers = ssl3_num_ciphers,
+	.get_cipher = ssl3_get_cipher,
+	.get_ssl_method = ssl23_get_client_method,
+	.get_timeout = ssl23_default_timeout,
+	.ssl3_enc = &ssl3_undef_enc_method,
+	.ssl_version = ssl_undefined_void_function,
+	.ssl_callback_ctrl = ssl3_callback_ctrl,
+	.ssl_ctx_callback_ctrl = ssl3_ctx_callback_ctrl,
+};
+
+const SSL_METHOD *
+SSLv23_client_method(void)
+{
+	return &SSLv23_client_method_data;
+}
+
 static const SSL_METHOD *
 ssl23_get_client_method(int ver)
 {
@@ -132,9 +171,6 @@ ssl23_get_client_method(int ver)
 		return (TLSv1_2_client_method());
 	return (NULL);
 }
-
-IMPLEMENT_ssl23_meth_func(SSLv23_client_method,
-    ssl_undefined_function, ssl23_connect, ssl23_get_client_method)
 
 int
 ssl23_connect(SSL *s)
@@ -249,30 +285,6 @@ end:
 	return (ret);
 }
 
-/*
- * Fill a ClientRandom or ServerRandom field of length len. Returns <= 0
- * on failure, 1 on success.
- */
-int
-ssl_fill_hello_random(SSL *s, int server, unsigned char *result, int len)
-{
-	int send_time = 0;
-
-	if (len < 4)
-		return 0;
-	if (server)
-		send_time = (s->mode & SSL_MODE_SEND_SERVERHELLO_TIME) != 0;
-	else
-		send_time = (s->mode & SSL_MODE_SEND_CLIENTHELLO_TIME) != 0;
-	if (send_time) {
-		unsigned long Time = (unsigned long)time(NULL);
-		unsigned char *p = result;
-		l2n(Time, p);
-		return RAND_pseudo_bytes(p, len - 4);
-	} else
-		return RAND_pseudo_bytes(result, len);
-}
-
 static int
 ssl23_client_hello(SSL *s)
 {
@@ -281,10 +293,6 @@ ssl23_client_hello(SSL *s)
 	int i;
 	unsigned long l;
 	int version = 0, version_major, version_minor;
-#ifndef OPENSSL_NO_COMP
-	int j;
-	SSL_COMP *comp;
-#endif
 	int ret;
 	unsigned long mask, options = s->options;
 
@@ -297,14 +305,10 @@ ssl23_client_hello(SSL *s)
 	 * answer is SSL_OP_NO_TLSv1|SSL_OP_NO_SSLv3|SSL_OP_NO_SSLv2.
 	 */
 	mask = SSL_OP_NO_TLSv1_1|SSL_OP_NO_TLSv1|SSL_OP_NO_SSLv3;
-#if !defined(OPENSSL_NO_TLS1_2_CLIENT)
 	version = TLS1_2_VERSION;
 
 	if ((options & SSL_OP_NO_TLSv1_2) && (options & mask) != mask)
 		version = TLS1_1_VERSION;
-#else
-	version = TLS1_1_VERSION;
-#endif
 	mask &= ~SSL_OP_NO_TLSv1_1;
 	if ((options & SSL_OP_NO_TLSv1_1) && (options & mask) != mask)
 		version = TLS1_VERSION;
@@ -315,16 +319,8 @@ ssl23_client_hello(SSL *s)
 
 	buf = (unsigned char *)s->init_buf->data;
 	if (s->state == SSL23_ST_CW_CLNT_HELLO_A) {
-#if 0
-		/* don't reuse session-id's */
-		if (!ssl_get_new_session(s, 0)) {
-			return (-1);
-		}
-#endif
-
 		p = s->s3->client_random;
-		if (ssl_fill_hello_random(s, 0, p, SSL3_RANDOM_SIZE) <= 0)
-			return -1;
+		RAND_pseudo_bytes(p, SSL3_RANDOM_SIZE);
 
 		if (version == TLS1_2_VERSION) {
 			version_major = TLS1_2_VERSION_MAJOR;
@@ -384,25 +380,11 @@ ssl23_client_hello(SSL *s)
 		s2n(i, p);
 		p += i;
 
-		/* COMPRESSION */
-#ifdef OPENSSL_NO_COMP
+		/* add in (no) COMPRESSION */
 		*(p++) = 1;
-#else
-		if ((s->options & SSL_OP_NO_COMPRESSION) ||
-		    !s->ctx->comp_methods)
-			j = 0;
-		else
-			j = sk_SSL_COMP_num(s->ctx->comp_methods);
-		*(p++) = 1 + j;
-		for (i = 0; i < j; i++) {
-			comp = sk_SSL_COMP_value(s->ctx->comp_methods, i);
-			*(p++) = comp->id;
-		}
-#endif
 		/* Add the NULL method */
 		*(p++) = 0;
 
-#ifndef OPENSSL_NO_TLSEXT
 		/* TLS extensions*/
 		if (ssl_prepare_clienthello_tlsext(s) <= 0) {
 			SSLerr(SSL_F_SSL23_CLIENT_HELLO,
@@ -414,7 +396,6 @@ ssl23_client_hello(SSL *s)
 			SSLerr(SSL_F_SSL23_CLIENT_HELLO, ERR_R_INTERNAL_ERROR);
 			return -1;
 		}
-#endif
 
 		l = p - d;
 
